@@ -1,0 +1,10 @@
+{
+  "name": "AI Gen Form v1.0 - By Boat Natthapon",
+  "id": "1623564417586014785",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": [
+    "figma"
+  ]
+}

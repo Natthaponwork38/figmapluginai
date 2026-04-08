@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 16px;
+      background: #111;
+      color: #fff;
+    }
+
+    h3 { margin-top: 0; }
+
+    input, button, textarea {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      box-sizing: border-box;
+      font-size: 12px;
+    }
+
+    input, textarea {
+      background: #1f1f1f;
+      color: #fff;
+      border: 1px solid #333;
+    }
+
+    button {
+      background: linear-gradient(135deg,#6366f1,#4f46e5);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    button.secondary { background: #333; }
+    button.selected { background: #16a34a; }
+
+    /* 🔥 BUTTON LOADING */
+    button.loading {
+      background: linear-gradient(
+        90deg,
+        #6366f1,
+        #818cf8,
+        #6366f1
+      );
+      background-size: 200% 100%;
+      animation: btnFlow 1.5s linear infinite;
+    }
+
+    @keyframes btnFlow {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .btn-loading {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .dropzone {
+      border: 1px dashed #555;
+      padding: 20px;
+      text-align: center;
+      margin-top: 10px;
+      border-radius: 8px;
+      color: #aaa;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .dropzone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+    }
+
+    .status { margin-top: 8px; font-size: 12px; }
+
+    .file-item {
+      display:flex;
+      justify-content:space-between;
+      background:#1a1a1a;
+      padding:6px 8px;
+      border-radius:6px;
+      margin-top:4px;
+      font-size:12px;
+    }
+
+    .file-item.waiting { color:#888; }
+    .file-item.processing { color:#facc15; }
+    .file-item.done { color:#22c55e; }
+    .file-item.error { color:#ef4444; }
+
+    .remove, .retry {
+      cursor:pointer;
+      opacity:0.6;
+      margin-left:6px;
+    }
+
+    .progress {
+      margin-top:8px;
+      height:6px;
+      background:#222;
+      border-radius:6px;
+      overflow:hidden;
+      position: relative;
+    }
+
+    .bar {
+      height:100%;
+      width:0%;
+      background:#22c55e;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bar::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,0.3),
+        transparent
+      );
+      animation: shimmer 1.2s infinite;
+    }
+
+    .progress.done .bar::after {
+      animation: none;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+  </style>
+</head>
+
+<body>
+
+<h3>Wireframe → Form</h3>
+
+<button id="selectBtn" class="secondary" onclick="selectFrame(); setSelected()">
+  Select Reference Frame
+</button>
+
+<input type="password" id="apiKey" placeholder="OpenAI API Key"/>
+
+<div class="dropzone">
+  <div id="dropText">Click / Drag / Paste Image</div>
+  <input type="file" id="file" multiple/>
+</div>
+
+<button id="genBtn" onclick="generateWrapper()">Generate</button>
+<button class="secondary" onclick="clearUI()">Clear</button>
+
+<div id="status" class="status">Progress</div>
+
+<div class="progress"><div id="bar" class="bar"></div></div>
+
+<div id="fileList"></div>
+
+<script>
+let files = [];
+let running = false;
+
+function setSelected(){
+  const btn=document.getElementById("selectBtn");
+  btn.classList.add("selected");
+  btn.innerText="Frame Selected ✓";
+}
+
+document.getElementById("file").addEventListener("change",(e)=>{
+  files = Array.from(e.target.files);
+  render();
+});
+
+function render(){
+  const list=document.getElementById("fileList");
+  list.innerHTML="";
+
+  files.forEach((f,i)=>{
+    const div=document.createElement("div");
+    div.id="f"+i;
+    div.className="file-item waiting";
+
+    div.innerHTML=`
+      <span>${f.name} <b id="status-${i}">→ waiting</b></span>
+      <span>
+        <span onclick="retryFile(${i})">🔁</span>
+        <span onclick="removeFile(${i})">🗑</span>
+      </span>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+function removeFile(i){
+  if(running) return;
+  files.splice(i,1);
+  render();
+}
+
+function setFileStatus(i,s){
+  const el=document.getElementById("f"+i);
+  const label=document.getElementById("status-"+i);
+
+  if(el) el.className="file-item "+s;
+
+  if(label){
+    let text="waiting";
+    if(s==="processing") text="⏳ processing";
+    if(s==="done") text="✅ done";
+    if(s==="error") text="❌ error";
+    label.innerText="→ "+text;
+  }
+}
+
+function progress(done,total){
+  document.getElementById("bar").style.width=(done/total*100)+"%";
+}
+
+function clearUI(){
+  if(running) return;
+
+  files=[];
+  render();
+
+  document.getElementById("file").value="";
+  document.getElementById("apiKey").value="";
+
+  const btn=document.getElementById("selectBtn");
+  btn.classList.remove("selected");
+  btn.innerText="Select Reference Frame";
+
+  document.getElementById("status").innerText="Idle";
+
+  document.getElementById("bar").style.width="0%";
+  document.querySelector(".progress").classList.remove("done");
+}
+
+async function retryFile(i){
+  if(running) return;
+  setFileStatus(i,"processing");
+}
+</script>
+
+<script>
+/* ===== ORIGINAL LOGIC (UNCHANGED) ===== */
+
+const OPENAI_PROMPT = [
+"You are a UI Structure Extraction Engine designed to analyze wireframe images and convert them into structured data that maps EXACTLY to a predefined Figma Design System.",
+"OBJECTIVE:",
+"Extract all form fields in TOP-TO-BOTTOM order.",
+"OUTPUT FORMAT (STRICT JSON ONLY):",
+"[",
+"{",
+'"id": "field_1",',
+'"label": "string",',
+'"type": "enum",',
+'"placeholder": "string | null",',
+'"choices": [],',
+'"confidence": 0.95,',
+'"reason": "string"',
+"}",
+"]",
+"ALLOWED TYPES:",
+"Input_Text",
+"Input_TextArea",
+"Input_Dropdown",
+"Input_Time",
+"Input_Calendar",
+"Input_DateRange",
+"Input_RadioButton",
+"Input_Checkbox",
+"PLACEHOLDER RULES:",
+'- Text/TextArea → ระบุ{label}',
+'- Dropdown → เลือก{label}',
+'- Time → ระบุเวลา',
+'- Calendar → ระบุวันที่',
+'- DateRange → ระบุวันที่',
+'- Radio/Checkbox → null',
+"RULES:",
+"- Preserve order",
+"- No hallucination",
+"- No translation",
+"CRITICAL FOR RADIO & CHECKBOX:",
+"- Label = text BEFORE checkbox/radio group",
+"- Choices = text NEXT TO each checkbox/radio",
+"- NEVER treat choice as label",
+"- NEVER leave choices empty"
+].join("\\n");
+
+function selectFrame(){
+  parent.postMessage({pluginMessage:{type:"select-frame"}},"*");
+}
+
+async function generateWrapper(){
+  if(running) return;
+
+  const apiKey=document.getElementById("apiKey").value;
+
+  if(!apiKey){ alert("Please input API Key"); return; }
+
+  const selected=document.getElementById("selectBtn").classList.contains("selected");
+  if(!selected){ alert("Please select reference frame"); return; }
+
+  if(!files.length){ alert("Please upload image"); return; }
+
+  running=true;
+
+  const btn = document.getElementById("genBtn");
+  btn.disabled = true;
+  btn.classList.add("loading","btn-loading");
+  btn.innerHTML = `Generating <span class="spinner"></span>`;
+
+  document.querySelector(".progress").classList.remove("done");
+
+  let done=0;
+  let success=0;
+  let fail=0;
+
+  for(let i=0;i<files.length;i++){
+    setFileStatus(i,"processing");
+
+    const base64=await toBase64(files[i]);
+
+    const res=await fetch("https://api.openai.com/v1/responses",{
+      method:"POST",
+      headers:{
+        "Authorization":"Bearer "+apiKey,
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        model:"gpt-4.1-mini",
+        input:[{
+          role:"user",
+          content:[
+            {type:"input_text",text:OPENAI_PROMPT},
+            {type:"input_image",image_url:"data:image/png;base64,"+base64}
+          ]
+        }]
+      })
+    });
+
+    const data=await res.json();
+
+    let text="";
+    try{
+      text=data.output?.[0]?.content?.[0]?.text||"";
+    }catch(e){}
+
+    if(!text){
+      setFileStatus(i,"error");
+      fail++;
+      continue;
+    }
+
+    parent.postMessage({
+      pluginMessage:{
+        type:"generate",
+        json:text,
+        filename:files[i].name.replace(/\.[^/.]+$/,"")
+      }
+    },"*");
+
+    done++;
+    success++;
+    setFileStatus(i,"done");
+    progress(done,files.length);
+  }
+
+  document.querySelector(".progress").classList.add("done");
+  document.getElementById("bar").style.width="100%";
+
+  document.getElementById("status").innerText=`✅ ${success} Success / ❌ ${fail} Failed`;
+
+  setTimeout(()=>{
+    running=false;
+
+    btn.disabled = false;
+    btn.classList.remove("loading","btn-loading");
+    btn.innerText = "Generate";
+
+  },800);
+}
+
+function toBase64(file){
+  return new Promise((res)=>{
+    const reader=new FileReader();
+    reader.onload=()=>res(reader.result.split(",")[1]);
+    reader.readAsDataURL(file);
+  });
+}
+</script>
+
+</body>
+</html>
