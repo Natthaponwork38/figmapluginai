@@ -162,7 +162,6 @@
       0% { left: -100%; }
       100% { left: 100%; }
     }
-
   </style>
 </head>
 
@@ -184,7 +183,7 @@
 <button id="genBtn" onclick="generateWrapper()">Generate</button>
 <button class="secondary" onclick="clearUI()">Clear</button>
 
-<div id="status" class="status">Progress</div>
+<div id="status" class="status">Idle</div>
 
 <div class="progress"><div id="bar" class="bar"></div></div>
 
@@ -193,6 +192,30 @@
 <script>
 let files = [];
 let running = false;
+let startTime = 0;
+let timerInterval;
+
+function formatTime(seconds){
+  if(seconds < 60){
+    return `${seconds} sec`;
+  }
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return `${min} min ${sec} sec`;
+}
+
+function startLiveTimer(){
+  timerInterval = setInterval(()=>{
+    const now = Date.now();
+    const sec = Math.floor((now - startTime)/1000);
+    document.getElementById("status").innerText =
+      `⏳ Processing... ${formatTime(sec)}`;
+  },1000);
+}
+
+function stopLiveTimer(){
+  clearInterval(timerInterval);
+}
 
 function setSelected(){
   const btn=document.getElementById("selectBtn");
@@ -278,7 +301,6 @@ async function retryFile(i){
 
 <script>
 /* ===== ORIGINAL LOGIC (UNCHANGED) ===== */
-
 const OPENAI_PROMPT = [
 "You are a UI Structure Extraction Engine designed to analyze wireframe images and convert them into structured data that maps EXACTLY to a predefined Figma Design System.",
 "OBJECTIVE:",
@@ -322,6 +344,7 @@ const OPENAI_PROMPT = [
 "- NEVER leave choices empty"
 ].join("\\n");
 
+
 function selectFrame(){
   parent.postMessage({pluginMessage:{type:"select-frame"}},"*");
 }
@@ -339,6 +362,9 @@ async function generateWrapper(){
   if(!files.length){ alert("Please upload image"); return; }
 
   running=true;
+
+  startTime = Date.now();
+  startLiveTimer();
 
   const btn = document.getElementById("genBtn");
   btn.disabled = true;
@@ -401,10 +427,15 @@ async function generateWrapper(){
     progress(done,files.length);
   }
 
+  stopLiveTimer();
+
+  const totalSec = Math.floor((Date.now() - startTime) / 1000);
+
   document.querySelector(".progress").classList.add("done");
   document.getElementById("bar").style.width="100%";
 
-  document.getElementById("status").innerText=`✅ ${success} Success / ❌ ${fail} Failed`;
+  document.getElementById("status").innerText =
+    `✅ ${success} Success / ❌ ${fail} Failed • ⏱ ${formatTime(totalSec)}`;
 
   setTimeout(()=>{
     running=false;
