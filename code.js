@@ -1,4 +1,3 @@
-
 figma.showUI(__html__, { width: 360, height: 520 });
 
 let referenceFrame = null;
@@ -45,9 +44,24 @@ figma.ui.onmessage = async (msg) => {
 
         let instance = component.createInstance().detachInstance();
 
+        // ===== DEFAULT TEXT =====
         await setText(instance, "{LabelName}", field.label);
         await setText(instance, "{Placeholder}", field.placeholder);
 
+        // ===== INPUT UPLOAD LOGIC =====
+        if (field.type === "Input_Upload") {
+          // Force placeholder
+          await setText(instance, "{Placeholder}", "เลือกไฟล์");
+
+          // Condition support
+          if (field.condition) {
+            await setText(instance, "{Condition}", field.condition);
+          } else {
+            await setText(instance, "{Condition}", "");
+          }
+        }
+
+        // ===== CHECKBOX / RADIO =====
         if (field.type === "Input_Checkbox" || field.type === "Input_RadioButton") {
           await buildChoices(instance, field);
         }
@@ -109,4 +123,3 @@ async function buildChoices(instance, field) {
     group.appendChild(item);
   }
 }
-
