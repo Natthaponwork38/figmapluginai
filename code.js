@@ -1,15 +1,14 @@
 figma.showUI(__html__, { width: 360, height: 520 });
 
 let referenceFrame = null;
-let rootWrapper = null; // 🔥 ตัวจัด layout หลัก
+let rootWrapper = null;
 
 // ==========================
-// 🔥 CREATE / GET WRAPPER
+// CREATE / GET WRAPPER
 // ==========================
 function getOrCreateWrapper() {
   if (rootWrapper && rootWrapper.parent) return rootWrapper;
 
-  // หา wrapper เดิมก่อน (กันซ้ำเวลา run หลายครั้ง)
   const existing = figma.currentPage.findOne(
     (n) => n.type === "FRAME" && n.name === "AI Generated Forms"
   );
@@ -19,7 +18,6 @@ function getOrCreateWrapper() {
     return rootWrapper;
   }
 
-  // สร้างใหม่
   const frame = figma.createFrame();
   frame.name = "AI Generated Forms";
 
@@ -42,7 +40,7 @@ function getOrCreateWrapper() {
 }
 
 // ==========================
-// 🔥 MAIN MESSAGE HANDLER
+// MAIN MESSAGE HANDLER
 // ==========================
 figma.ui.onmessage = async (msg) => {
   if (msg.type === "select-frame") {
@@ -71,9 +69,6 @@ figma.ui.onmessage = async (msg) => {
 
       const fields = JSON.parse(clean);
 
-      // ==========================
-      // 🔥 CREATE FORM FRAME
-      // ==========================
       const newFrame = figma.createFrame();
       newFrame.name = msg.filename || "Generated Form";
 
@@ -86,9 +81,6 @@ figma.ui.onmessage = async (msg) => {
       newFrame.paddingLeft = 16;
       newFrame.paddingRight = 16;
 
-      // ==========================
-      // 🔥 BUILD FIELDS
-      // ==========================
       for (const field of fields) {
         const component = referenceFrame.findOne(
           (n) => n.type === "COMPONENT" && n.name === field.type
@@ -98,22 +90,16 @@ figma.ui.onmessage = async (msg) => {
 
         let instance = component.createInstance().detachInstance();
 
-        // ---------- DEFAULT ----------
+        // ===== DEFAULT =====
         await setText(instance, "{LabelName}", field.label);
         await setText(instance, "{Placeholder}", field.placeholder);
 
-        // ---------- INPUT UPLOAD ----------
-        if (field.type === "Input_Upload") {
-          await setText(instance, "{Placeholder}", "เลือกไฟล์");
-
-          if (field.condition) {
-            await setText(instance, "{Condition}", field.condition);
-          } else {
-            await setText(instance, "{Condition}", "");
-          }
+        // ===== NUMBER RANGE (minimal override) =====
+        if (field.type === "Input_NumberRange") {
+          await setText(instance, "{Placeholder}", "ระบุจำนวน");
         }
 
-        // ---------- CHECKBOX / RADIO ----------
+        // ===== CHECKBOX / RADIO =====
         if (
           field.type === "Input_Checkbox" ||
           field.type === "Input_RadioButton"
@@ -124,7 +110,6 @@ figma.ui.onmessage = async (msg) => {
         newFrame.appendChild(instance);
       }
 
-      // 🔥 ใส่เข้า wrapper → ไม่ต้องคุมตำแหน่งเองแล้ว
       wrapper.appendChild(newFrame);
 
       figma.notify("Generated ✅");
@@ -136,7 +121,7 @@ figma.ui.onmessage = async (msg) => {
 };
 
 // ==========================
-// 🔤 FONT + TEXT HELPERS
+// TEXT HELPERS
 // ==========================
 async function loadFont(node) {
   if (node.fontName !== figma.mixed) {
@@ -155,7 +140,7 @@ async function setText(instance, name, value) {
 }
 
 // ==========================
-// 🔘 CHOICES BUILDER
+// CHOICES BUILDER
 // ==========================
 function normalizeChoices(choices) {
   if (!choices) return [];
