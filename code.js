@@ -7,7 +7,17 @@ let rootWrapper = null;
 // CREATE / GET WRAPPER
 // ==========================
 function getOrCreateWrapper() {
-  if (rootWrapper && rootWrapper.parent) return rootWrapper;
+  try {
+    if (
+      rootWrapper &&
+      rootWrapper.type === "FRAME" &&
+      rootWrapper.parent
+    ) {
+      return rootWrapper;
+    }
+  } catch (e) {
+    rootWrapper = null;
+  }
 
   const existing = figma.currentPage.findOne(
     (n) => n.type === "FRAME" && n.name === "AI Generated Forms"
@@ -30,9 +40,6 @@ function getOrCreateWrapper() {
   frame.paddingLeft = 40;
   frame.paddingRight = 40;
 
-  frame.x = 0;
-  frame.y = 0;
-
   figma.currentPage.appendChild(frame);
 
   rootWrapper = frame;
@@ -40,7 +47,7 @@ function getOrCreateWrapper() {
 }
 
 // ==========================
-// MAIN MESSAGE HANDLER
+// MAIN
 // ==========================
 figma.ui.onmessage = async (msg) => {
   if (msg.type === "select-frame") {
@@ -88,23 +95,75 @@ figma.ui.onmessage = async (msg) => {
 
         if (!component) continue;
 
-        let instance = component.createInstance().detachInstance();
+        const needDetach =
+          field.type === "Input_Checkbox" ||
+          field.type === "Input_RadioButton";
 
-        // ===== DEFAULT =====
+        let instance = component.createInstance();
+
+        if (needDetach) {
+          instance = instance.detachInstance();
+        }
+
+        // LABEL
         await setText(instance, "{LabelName}", field.label);
-        await setText(instance, "{Placeholder}", field.placeholder);
 
-        // ===== NUMBER RANGE (minimal override) =====
-        if (field.type === "Input_NumberRange") {
+        // VALUE / PLACEHOLDER
+        const hasValue =
+          field.value !== undefined &&
+          field.value !== null &&
+          field.value !== "";
+
+        const displayText = hasValue
+          ? field.value
+          : field.placeholder;
+
+        await setText(instance, "{Placeholder}", displayText);
+
+        if (!needDetach) {
+          applyValueVariant(instance, hasValue);
+        }
+
+        // NUMBER RANGE
+        if (field.type === "Input_NumberRange" && !hasValue) {
           await setText(instance, "{Placeholder}", "ระบุจำนวน");
         }
 
-        // ===== CHECKBOX / RADIO =====
+        // RADIO / CHECKBOX
         if (
           field.type === "Input_Checkbox" ||
           field.type === "Input_RadioButton"
         ) {
           await buildChoices(instance, field);
+        }
+
+        // ================================
+        // ✅ FIX INPUT_UPLOAD (REAL FINAL)
+        // ================================
+        if (field.type === "Input_Upload") {
+          try {
+            const textfield = instance.findOne(
+              (n) =>
+                n.type === "INSTANCE" &&
+                (n.name === "Textfield" || n.name === "Textarea")
+            );
+
+            if (textfield) {
+              const conditionNode = textfield.findOne(
+                (n) =>
+                  n.type === "TEXT" &&
+                  n.name &&
+                  n.name.includes("{Condition}")
+              );
+
+              if (conditionNode) {
+                await loadFont(conditionNode);
+                conditionNode.characters = "{Condition}";
+              }
+            }
+          } catch (e) {
+            console.warn("Upload condition fix failed", e);
+          }
         }
 
         newFrame.appendChild(instance);
@@ -121,7 +180,46 @@ figma.ui.onmessage = async (msg) => {
 };
 
 // ==========================
-// TEXT HELPERS
+// VALUE VARIANT
+// ==========================
+function applyValueVariant(instance, hasValue) {
+  try {
+    const target = instance.findOne(
+      (n) =>
+        n.type === "INSTANCE" &&
+        (n.name === "Textfield" || n.name === "Textarea")
+    );
+
+    if (!target) return;
+
+    const props = target.componentProperties;
+    if (!props) return;
+
+    const valueKey = Object.keys(props).find((key) =>
+      key.toLowerCase().includes("value")
+    );
+
+    if (!valueKey) return;
+
+    const prop = props[valueKey];
+
+    if (typeof prop.value === "string") {
+      target.setProperties({
+        [valueKey]: hasValue ? "True" : "False"
+      });
+    } else {
+      target.setProperties({
+        [valueKey]: hasValue
+      });
+    }
+
+  } catch (e) {
+    console.warn("Variant apply failed", e);
+  }
+}
+
+// ==========================
+// TEXT
 // ==========================
 async function loadFont(node) {
   if (node.fontName !== figma.mixed) {
@@ -140,7 +238,7 @@ async function setText(instance, name, value) {
 }
 
 // ==========================
-// CHOICES BUILDER
+// CHOICES
 // ==========================
 function normalizeChoices(choices) {
   if (!choices) return [];

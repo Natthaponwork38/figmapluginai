@@ -300,11 +300,15 @@ async function retryFile(i){
 </script>
 
 <script>
-/* ===== ORIGINAL LOGIC (UNCHANGED) ===== */
+// ==========================
+// AI Prompt
+// ==========================
 const OPENAI_PROMPT = [
 "You are a UI Structure Extraction Engine designed to analyze wireframe images and convert them into structured data that maps EXACTLY to a predefined Figma Design System.",
+
 "OBJECTIVE:",
 "Extract all form fields in TOP-TO-BOTTOM order.",
+
 "OUTPUT FORMAT (STRICT JSON ONLY):",
 "[",
 "{",
@@ -312,11 +316,13 @@ const OPENAI_PROMPT = [
 '"label": "string",',
 '"type": "enum",',
 '"placeholder": "string | null",',
+'"value": "string (optional)",',
 '"choices": [],',
 '"confidence": 0.95,',
 '"reason": "string"',
 "}",
 "]",
+
 "ALLOWED TYPES:",
 "Input_Text",
 "Input_TextArea",
@@ -325,27 +331,75 @@ const OPENAI_PROMPT = [
 "Input_Calendar",
 "Input_DateRange",
 "Input_RadioButton",
+"Input_Upload",
 "Input_Checkbox",
 "Input_NumberRange",
+
+// ==========================
+// VALUE DETECTION
+// ==========================
+"VALUE DETECTION RULES:",
+"- If an input field already contains meaningful user-entered text → assign it to 'value'",
+"- If text looks like hint text (e.g. 'ระบุ...', 'กรอก...', 'Placeholder', 'Enter...', 'Select...') → treat it as placeholder",
+"- If value exists → MUST include 'value'",
+"- If no value → DO NOT include 'value'",
+
+// ==========================
+// PLACEHOLDER
+// ==========================
 "PLACEHOLDER RULES:",
-'- Text/TextArea → ระบุ{label}',
-'- Dropdown → เลือก{label}',
-'- Time → ระบุเวลา',
-'- Calendar → ระบุวันที่',
-'- DateRange → ระบุวันที่',
-'- NumberRange → ระบุจำนวน',
-'- Radio/Checkbox → null',
+"- Text/TextArea → ระบุ{label}",
+"- Dropdown → เลือก{label}",
+"- Time → ระบุเวลา",
+"- Calendar → ระบุวันที่",
+"- DateRange → ระบุวันที่",
+"- NumberRange → ระบุจำนวน",
+"- Upload → เลือกไฟล์",
+"- Radio/Checkbox → null",
+
+// ==========================
+// TYPE SELECTION
+// ==========================
 "TYPE SELECTION RULES:",
 "- Range / Min-Max / ช่วง / ตั้งแต่ ถึง → Input_NumberRange",
+
+// ==========================
+// FILE UPLOAD (TEXT-BASED)
+// ==========================
+"FILE UPLOAD DETECTION RULE (HIGH PRIORITY):",
+"- If a field includes a \"Browse\" button OR file type hints such as (.PDF, .DOC, .XLS, .XLSX, etc.)",
+"- OR has an input field with an adjacent button for selecting files",
+"→ MUST classify as: Input_Upload",
+"- This rule OVERRIDES Input_Text classification",
+
+// ==========================
+// FILE UPLOAD (ICON-BASED)
+// ==========================
+"UPLOAD FIELD DETECTION (VERY IMPORTANT):",
+"- This rule has HIGHER PRIORITY than all other type detection rules",
+"- If a field shows a paperclip icon, attachment icon, or upload icon → MUST be Input_Upload",
+"- If a field has no visible typing text but is used for file attachment → MUST be Input_Upload",
+"- If multiple similar empty fields with attachment icons appear in a list → ALL must be Input_Upload",
+"- DO NOT classify these as Input_Text",
+
+// ==========================
+// GLOBAL RULES
+// ==========================
 "RULES:",
 "- Preserve order",
 "- No hallucination",
 "- No translation",
+"- Correct type classification is more important than guessing placeholder",
+
+// ==========================
+// RADIO / CHECKBOX
+// ==========================
 "CRITICAL FOR RADIO & CHECKBOX:",
 "- Label = text BEFORE checkbox/radio group",
 "- Choices = text NEXT TO each checkbox/radio",
 "- NEVER treat choice as label",
 "- NEVER leave choices empty"
+
 ].join("\\n");
 
 
@@ -410,6 +464,7 @@ async function generateWrapper(){
     try{
       text=data.output?.[0]?.content?.[0]?.text||"";
     }catch(e){}
+    console.log("AI RAW TEXT >>>", text);
 
     if(!text){
       setFileStatus(i,"error");
