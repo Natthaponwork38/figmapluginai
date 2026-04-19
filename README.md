@@ -1,83 +1,108 @@
-# AI Gen Form v1.0
+# Wireframe to Form v2.0
 
-Figma plugin that converts wireframe screenshots into form components by using AI field extraction and mapping each detected field to components inside a selected reference frame.
+Figma plugin that converts wireframe images into ready-to-use form layouts by extracting fields with AI, then mapping each field to components in your selected reference frame.
+
+## Major UI Upgrade
+
+This version includes a major UI/UX upgrade aligned to a cleaner Figma plugin design style:
+
+- Two-tab layout: `Generate` and `Configuration`
+- Clear settings sections: `AI Settings (OpenAI Key)` and `Log Settings`
+- Optional Google Sheet sync toggle (plugin can run without sync)
+- Improved status messaging and setup guidance for non-technical users
+- Persistent configuration values (OpenAI key and connector preferences)
 
 ## What This Plugin Does
 
-- Accepts one or multiple reference images (wireframes)
+- Accepts one or multiple wireframe images
 - Sends each image to OpenAI Responses API for structured field extraction
-- Generates Figma frames from the extracted schema
-- Reuses your design-system components from a selected reference frame
-- Supports retry per failed file and live processing status
+- Generates Figma form frames from extracted schema
+- Reuses your own design-system components from a selected reference frame
+- Supports per-file retry, live processing status, and generation timing logs
 
 ## Core Features
 
-- Real selection validation:
-	The Select Reference Frame button is now stateful from backend confirmation, not click-only UI state.
-	- Green: frame selection confirmed
-	- Red: selection invalid or missing
-- Batch image processing with per-file status
-- Dynamic plugin height resize for cleaner Figma panel behavior
-- JSON response validation before generation
-- Improved error diagnostics for API and parsing failures
+- Stateful reference-frame selection from backend validation
+- Batch processing with file-level states: waiting, processing, done, error
+- JSON schema validation before generation
+- Local generation log history and downloadable all-time log file
+- Optional connector-based Google Sheet sync after each generation
+- Auto-resizing plugin panel for smoother Figma workflow
+- OpenAI API key persistence via `figma.clientStorage`
+
+## Google Sheet Sync (Optional)
+
+Google Sheet sync is optional and controlled in `Configuration`.
+
+When sync is enabled:
+
+1. Paste your Google Sheet link.
+2. Share that Sheet with `n.pboat@gmail.com` as `Editor`.
+3. Click `Connect`.
+4. Logs are sent automatically after each generation.
+
+When sync is disabled:
+
+- The plugin still works normally for generation.
+- Logs are still stored locally in plugin storage.
 
 ## Supported Field Types
 
-The generator maps extracted fields to component names in your selected reference frame.
+The generator maps extracted fields to component names in your selected reference frame:
 
-- Input_Text
-- Input_TextArea
-- Input_Dropdown
-- Input_Time
-- Input_Calendar
-- Input_DateRange
-- Input_RadioButton
-- Input_Upload
-- Input_Checkbox
-- Input_NumberRange
+- `Input_Text`
+- `Input_TextArea`
+- `Input_Dropdown`
+- `Input_Time`
+- `Input_Calendar`
+- `Input_DateRange`
+- `Input_RadioButton`
+- `Input_Upload`
+- `Input_Checkbox`
+- `Input_NumberRange`
 
 ## Project Structure
 
 - [manifest.json](manifest.json): plugin metadata and entry points
-- [code.js](code.js): Figma runtime logic (selection, generation, component mapping)
-- [ui.html](ui.html): plugin UI, upload flow, API calls, and progress states
+- [code.js](code.js): Figma runtime logic (selection, generation, storage, connector messaging)
+- [ui.html](ui.html): plugin UI, API calls, generation workflow, and config states
 
 ## Local Development (Figma)
 
 1. Open Figma Desktop.
-2. Go to Plugins > Development > Import plugin from manifest.
-3. Select [manifest.json](manifest.json) from this repository.
-4. Run AI Gen Form v1.0 from Development plugins.
+2. Go to `Plugins` > `Development` > `Import plugin from manifest`.
+3. Select [manifest.json](manifest.json).
+4. Run `Wireframe to Form v2.0` from Development plugins.
 
 ## How To Use
 
-1. Prepare a reference frame in your Figma file.
-2. Make sure the frame contains components named with supported type keys (for example Input_Text, Input_Upload).
-3. Click Select Reference Frame.
-4. Confirm the button turns green (valid selection).
-5. Enter your OpenAI API key.
-6. Upload wireframe image(s).
-7. Click Generate.
-8. Generated output appears under AI Generated Forms frame.
+1. Open `Configuration` tab.
+2. Enter OpenAI API key in `AI Settings (OpenAI Key)`.
+3. (Optional) Enable Google Sheet log sync and connect your Sheet.
+4. Go to `Generate` tab.
+5. Select a reference frame containing components named with supported keys.
+6. Upload one or more wireframe images.
+7. Click `Generate`.
+8. Output is created under the `AI Generated Forms` frame.
 
 ## Security Notes
 
-- Do not hardcode API keys in source files.
-- Use the runtime input field for API key only.
-- Keep local secret files out of Git via [.gitignore](.gitignore).
+- Do not hardcode credentials in source files.
+- OpenAI API key is stored locally in plugin storage (`figma.clientStorage`).
+- Keep repository clean from secrets using [.gitignore](.gitignore).
 
 ## Troubleshooting
 
-- Button stays red after Select Reference Frame:
-	Select exactly one node and ensure it is a Figma FRAME.
-- Generation says no reference frame selected:
-	Re-select the frame (it may have been removed or changed).
-- Invalid JSON or empty response:
-	Retry the file from the failed item action.
-- Components are missing in generated result:
-	Verify component names in your reference frame match supported type keys.
+- `Please select reference frame`:
+Select exactly one Figma `FRAME` before generating.
+- Connect fails for Google Sheet sync:
+Ensure the Sheet is shared with `n.pboat@gmail.com` as `Editor`.
+- Empty/invalid AI response:
+Retry the failed file from the file action row.
+- Missing components in output:
+Verify component names in the reference frame match supported field types.
 
 ## Version
 
-Current plugin title: AI Gen Form v1.0
+Current plugin title: `Wireframe to Form v2.0`
 
