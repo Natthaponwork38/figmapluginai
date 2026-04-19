@@ -176,6 +176,17 @@
     #clearBtn:hover:not(:disabled) { background: var(--bg-hover); }
     #clearBtn:disabled              { opacity: 0.5; cursor: not-allowed; }
 
+    #logBtn {
+      height: 32px; padding: 0 10px;
+      border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text); font-size: 14px; font-weight: 400;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.1s;
+    }
+    #logBtn:hover:not(:disabled) { background: var(--bg-hover); }
+    #logBtn:disabled              { opacity: 0.5; cursor: not-allowed; }
+
     /* ── Status ── */
     .status { font-size: 11px; color: var(--text-secondary); line-height: 1.5; min-height: 16px; }
 
@@ -320,6 +331,7 @@
         Generate
       </button>
       <button id="clearBtn" onclick="clearUI()">Clear</button>
+      <button id="logBtn" onclick="downloadGenerationLog()" title="Download generation log">📊</button>
     </div>
 
     <!-- Status -->
@@ -762,6 +774,83 @@ const OPENAI_PROMPT = [
 
 ].join("\\n");
 
+// ══════════════════════════════════════════════════════════════════════════
+// GENERATION LOG (localStorage + download)
+// ══════════════════════════════════════════════════════════════════════════
+const LOG_KEY = "AI_GEN_FORM_LOG";
+
+function getGenerationLogs(){
+  try {
+    const stored = localStorage.getItem(LOG_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.warn("[Log] Could not parse logs:", e.message);
+    return [];
+  }
+}
+
+function logGeneration(success, failed, filenames, durationSec){
+  try {
+    const logs = getGenerationLogs();
+    const now = new Date();
+    const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+    const timeStr = now.toTimeString().split(" ")[0]; // HH:MM:SS
+    
+    const entry = {
+      date: dateStr,
+      time: timeStr,
+      duration_sec: durationSec,
+      success: success,
+      failed: failed,
+      total: success + failed,
+      filenames: filenames,
+      timestamp: now.toISOString()
+    };
+    
+    logs.push(entry);
+    localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+    console.log("[Log] Saved entry:", entry);
+  } catch (e) {
+    console.error("[Log] Error saving log:", e.message);
+  }
+}
+
+function downloadGenerationLog(){
+  try {
+    const logs = getGenerationLogs();
+    if(logs.length === 0){
+      alert("No generation logs yet");
+      return;
+    }
+    
+    let content = "=== AI Gen Form - Generation Log ===\n\n";
+    
+    logs.forEach((log, idx) => {
+      content += `[${idx + 1}] ${log.date} ${log.time}\n`;
+      content += `    ⏱ Duration: ${log.duration_sec} sec\n`;
+      content += `    ✅ Success: ${log.success} | ❌ Failed: ${log.failed}\n`;
+      if(log.filenames && log.filenames.length > 0){
+        content += `    📄 Files: ${log.filenames.join(", ")}\n`;
+      }
+      content += "\n";
+    });
+    
+    // Create blob and download
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "generation_log.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    console.log("[Log] Downloaded log file");
+  } catch (e) {
+    console.error("[Log] Error downloading log:", e.message);
+    alert("Error downloading log: " + e.message);
+  }
+}
 
 function selectFrame(){
   parent.postMessage({pluginMessage:{type:"select-frame"}},"*");
@@ -894,6 +983,10 @@ async function generateWrapper(){
 
   document.getElementById("status").innerText =
     `✅ ${success} Success / ❌ ${fail} Failed • ⏱ ${formatTime(totalSec)}`;
+
+  // Log generation metrics to localStorage
+  const filenamesToLog = files.map(f => f.name.replace(/\.[^/.]+$/, ""));
+  logGeneration(success, fail, filenamesToLog, totalSec);
 
   setTimeout(()=>{
     running=false;
