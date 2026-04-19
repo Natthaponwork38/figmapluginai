@@ -105,10 +105,14 @@ figma.ui.onmessage = async (msg) => {
           instance = instance.detachInstance();
         }
 
+        // ==========================
         // LABEL
+        // ==========================
         await setText(instance, "{LabelName}", field.label);
 
+        // ==========================
         // VALUE / PLACEHOLDER
+        // ==========================
         const hasValue =
           field.value !== undefined &&
           field.value !== null &&
@@ -124,12 +128,16 @@ figma.ui.onmessage = async (msg) => {
           applyValueVariant(instance, hasValue);
         }
 
-        // NUMBER RANGE
+        // ==========================
+        // NUMBER RANGE FIX
+        // ==========================
         if (field.type === "Input_NumberRange" && !hasValue) {
           await setText(instance, "{Placeholder}", "ระบุจำนวน");
         }
 
+        // ==========================
         // RADIO / CHECKBOX
+        // ==========================
         if (
           field.type === "Input_Checkbox" ||
           field.type === "Input_RadioButton"
@@ -137,33 +145,34 @@ figma.ui.onmessage = async (msg) => {
           await buildChoices(instance, field);
         }
 
-        // ================================
-        // ✅ FIX INPUT_UPLOAD (REAL FINAL)
-        // ================================
+        // ==========================
+        // ✅ INPUT UPLOAD (FIX FINAL)
+        // ==========================
         if (field.type === "Input_Upload") {
           try {
-            const textfield = instance.findOne(
+            const target = instance.findOne(
               (n) =>
                 n.type === "INSTANCE" &&
                 (n.name === "Textfield" || n.name === "Textarea")
             );
 
-            if (textfield) {
-              const conditionNode = textfield.findOne(
-                (n) =>
-                  n.type === "TEXT" &&
-                  n.name &&
-                  n.name.includes("{Condition}")
+            if (target && target.componentProperties) {
+              const key = Object.keys(target.componentProperties).find((k) =>
+                k.toLowerCase().includes("description")
               );
 
-              if (conditionNode) {
-                await loadFont(conditionNode);
-                conditionNode.characters = "{Condition}";
+              if (key) {
+                target.setProperties({
+                  [key]:
+                    typeof target.componentProperties[key].value === "string"
+                      ? "True"
+                      : true
+                });
               }
             }
-          } catch (e) {
-            console.warn("Upload condition fix failed", e);
-          }
+          } catch (e) {}
+
+          await setText(instance, "{Condition}", field.condition || "");
         }
 
         newFrame.appendChild(instance);
@@ -173,7 +182,6 @@ figma.ui.onmessage = async (msg) => {
 
       figma.notify("Generated ✅");
     } catch (err) {
-      console.error(err);
       figma.notify("Error");
     }
   }
@@ -213,9 +221,7 @@ function applyValueVariant(instance, hasValue) {
       });
     }
 
-  } catch (e) {
-    console.warn("Variant apply failed", e);
-  }
+  } catch (e) {}
 }
 
 // ==========================
@@ -228,9 +234,15 @@ async function loadFont(node) {
 }
 
 async function setText(instance, name, value) {
-  const node = instance.findOne(
-    (n) => n.type === "TEXT" && n.name === name
-  );
+  const node = instance.findAll(
+    (n) =>
+      n.type === "TEXT" &&
+      (
+        n.name === name ||
+        (n.characters && n.characters.trim() === name)
+      )
+  )[0];
+
   if (!node) return;
 
   await loadFont(node);

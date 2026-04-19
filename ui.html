@@ -317,6 +317,7 @@ const OPENAI_PROMPT = [
 '"type": "enum",',
 '"placeholder": "string | null",',
 '"value": "string (optional)",',
+'"condition": "string (optional)",',
 '"choices": [],',
 '"confidence": 0.95,',
 '"reason": "string"',
@@ -381,6 +382,16 @@ const OPENAI_PROMPT = [
 "- If a field has no visible typing text but is used for file attachment → MUST be Input_Upload",
 "- If multiple similar empty fields with attachment icons appear in a list → ALL must be Input_Upload",
 "- DO NOT classify these as Input_Text",
+
+// ==========================
+// FILE UPLOAD (CONDITION EXTRACTION)
+// ==========================
+"UPLOAD CONDITION EXTRACTION (CRITICAL):",
+"- If type is Input_Upload:",
+"- Extract any helper text, hint, or description NEAR the upload field (right side or below)",
+"- Examples: 'Support file types: ...', 'Allowed file types: ...', 'Max file size ...'",
+"- Save this text into 'condition'",
+"- If no such text exists → DO NOT include 'condition'",
 
 // ==========================
 // GLOBAL RULES
