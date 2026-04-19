@@ -59,10 +59,18 @@ figma.ui.onmessage = async (msg) => {
     const node = figma.currentPage.selection[0];
     if (!node || node.type !== "FRAME") {
       figma.notify("Please select a Frame");
+      figma.ui.postMessage({
+        type: "select-frame-result",
+        selected: false
+      });
       return;
     }
     referenceFrame = node;
     figma.notify("Reference frame selected");
+    figma.ui.postMessage({
+      type: "select-frame-result",
+      selected: true
+    });
   }
 
   if (msg.type === "generate") {
@@ -76,6 +84,10 @@ figma.ui.onmessage = async (msg) => {
       if (!referenceFrame.parent) {
         figma.notify("Reference frame was deleted");
         referenceFrame = null;
+        figma.ui.postMessage({
+          type: "select-frame-result",
+          selected: false
+        });
         return;
       }
 

@@ -65,41 +65,6 @@
       flex-direction: column;
     }
 
-    /* ── Title Bar ── */
-    .title-bar {
-      height: 41px;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 14px;
-      flex-shrink: 0;
-      user-select: none;
-    }
-    .title-bar-left { display: flex; align-items: center; gap: 8px; }
-    .title-icon {
-      width: 20px; height: 20px;
-      background: var(--blue);
-      border-radius: 5px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .title-name { font-size: 11px; font-weight: 600; color: var(--text); }
-    .title-version {
-      font-size: 10px; color: var(--text-secondary);
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      padding: 1px 6px;
-    }
-    .close-btn {
-      background: transparent; border: none; cursor: pointer;
-      padding: 4px; border-radius: 4px; color: var(--text-secondary);
-      display: flex; align-items: center; transition: background 0.1s;
-    }
-    .close-btn:hover { background: var(--bg-hover); }
-
     /* ── Body ── */
     .body {
       padding: 16px;
@@ -134,6 +99,8 @@
     #selectBtn:hover:not(:disabled) { background: var(--blue-hover); }
     #selectBtn.selected             { background: var(--green); }
     #selectBtn.selected:hover       { background: var(--green-hover); }
+    #selectBtn.error                { background: var(--red); }
+    #selectBtn.error:hover          { background: #db3d1a; }
     #selectBtn:disabled             { opacity: 0.55; cursor: not-allowed; }
 
     /* ── API Key ── */
@@ -299,24 +266,6 @@
 
 <div class="plugin-window">
 
-  <!-- Title Bar -->
-  <div class="title-bar">
-    <div class="title-bar-left">
-      <div class="title-icon">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-        </svg>
-      </div>
-      <span class="title-name">AI Gen Form</span>
-      <span class="title-version">v1.0</span>
-    </div>
-    <button class="close-btn" onclick="closePlugin()" title="Close">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-      </svg>
-    </button>
-  </div>
-
   <!-- Body -->
   <div class="body">
 
@@ -331,7 +280,7 @@
     <!-- Selection -->
     <div>
       <span class="section-label">Selection</span>
-      <button id="selectBtn" onclick="selectFrame(); setSelected()">Select Reference Frame</button>
+      <button id="selectBtn" onclick="selectFrame()">Select Reference Frame</button>
     </div>
 
     <!-- API Key -->
@@ -418,12 +367,6 @@ function toggleApiKey(){
   }
 }
 
-// ── Close Plugin ───────────────────────────────────────────────────────────────
-function closePlugin(){
-  const win = document.querySelector(".plugin-window");
-  if(win) win.style.display = "none";
-}
-
 // ── Auto Resize (with debounce to avoid spam) ────────────────────────────────
 let resizeTimeout;
 const resizeObserver = new ResizeObserver(() => {
@@ -464,11 +407,28 @@ function stopLiveTimer(){
   clearInterval(timerInterval);
 }
 
-function setSelected(){
+function setSelected(isSelected){
   const btn=document.getElementById("selectBtn");
-  btn.classList.add("selected");
-  btn.innerHTML=`${ICON_CHECKFRAME} Frame Selected ✓`;
+  btn.classList.remove("selected","error");
+
+  if(isSelected){
+    btn.classList.add("selected");
+    btn.innerHTML=`${ICON_CHECKFRAME} Frame Selected`;
+    return;
+  }
+
+  btn.classList.add("error");
+  btn.innerHTML="✕ Please Select a Frame";
 }
+
+window.onmessage = (event) => {
+  const msg = event.data.pluginMessage;
+  if(!msg) return;
+
+  if(msg.type === "select-frame-result"){
+    setSelected(!!msg.selected);
+  }
+};
 
 document.getElementById("file").addEventListener("change",(e)=>{
   files = Array.from(e.target.files);
