@@ -422,12 +422,18 @@ function setSelected(isSelected){
 }
 
 window.onmessage = (event) => {
+  // Strict message validation: type-check and payload validation
   const msg = event.data.pluginMessage;
-  if(!msg) return;
+  if(!msg || typeof msg !== "object") return;
+  if(!msg.type || typeof msg.type !== "string") return;
 
+  // Only process known message types
   if(msg.type === "select-frame-result"){
-    setSelected(!!msg.selected);
+    // Validate payload: selected must be boolean
+    if(typeof msg.selected !== "boolean") return;
+    setSelected(msg.selected);
   }
+  // Ignore unknown message types silently
 };
 
 document.getElementById("file").addEventListener("change",(e)=>{
@@ -450,17 +456,39 @@ function render(){
     div.id="f"+i;
     div.className="file-item";
 
-    div.innerHTML=`
-      <div class="file-item-left">
-        <span class="file-name">${f.name}</span>
-        <span class="file-arrow">→</span>
-        <span class="file-status waiting" id="status-${i}">${ICON_CLOCK} waiting</span>
-      </div>
-      <div class="file-actions">
-        <button class="mini-btn danger" onclick="removeFile(${i})" title="Remove">${ICON_TRASH}</button>
-      </div>
-    `;
-
+    // Left section with filename and status
+    const left=document.createElement("div");
+    left.className="file-item-left";
+    
+    const nameSpan=document.createElement("span");
+    nameSpan.className="file-name";
+    nameSpan.textContent=f.name; // Safe: prevents XSS from filename
+    left.appendChild(nameSpan);
+    
+    const arrow=document.createElement("span");
+    arrow.className="file-arrow";
+    arrow.textContent="→";
+    left.appendChild(arrow);
+    
+    const statusSpan=document.createElement("span");
+    statusSpan.className="file-status waiting";
+    statusSpan.id="status-"+i;
+    statusSpan.innerHTML=`${ICON_CLOCK} waiting`; // Safe: icons are hardcoded
+    left.appendChild(statusSpan);
+    
+    // Actions section
+    const actions=document.createElement("div");
+    actions.className="file-actions";
+    
+    const removeBtn=document.createElement("button");
+    removeBtn.className="mini-btn danger";
+    removeBtn.title="Remove";
+    removeBtn.innerHTML=ICON_TRASH; // Safe: hardcoded
+    removeBtn.onclick=()=>removeFile(i); // Safe: closure-based
+    actions.appendChild(removeBtn);
+    
+    div.appendChild(left);
+    div.appendChild(actions);
     list.appendChild(div);
   });
 }
@@ -487,19 +515,26 @@ function setFileStatus(i,s){
     error:      { icon: ICON_XCIRCLE, text: "error" },
   };
   const { icon, text } = statusMap[s] || statusMap.waiting;
-  label.innerHTML = `${icon} ${text}`;
+  label.innerHTML = `${icon} ${text}`; // Safe: hardcoded icons and predefined text
 
   const actions = el.querySelector(".file-actions");
+  actions.innerHTML = ""; // Clear old buttons
+  
   if(s === "error"){
-    actions.innerHTML = `
-      <button class="mini-btn" onclick="retryFile(${i})" title="Retry">${ICON_RETRY}</button>
-      <button class="mini-btn danger" onclick="removeFile(${i})" title="Remove">${ICON_TRASH}</button>
-    `;
-  } else {
-    actions.innerHTML = `
-      <button class="mini-btn danger" onclick="removeFile(${i})" title="Remove">${ICON_TRASH}</button>
-    `;
+    const retryBtn=document.createElement("button");
+    retryBtn.className="mini-btn";
+    retryBtn.title="Retry";
+    retryBtn.innerHTML=ICON_RETRY; // Safe: hardcoded
+    retryBtn.onclick=()=>retryFile(i); // Safe: closure-based
+    actions.appendChild(retryBtn);
   }
+  
+  const removeBtn=document.createElement("button");
+  removeBtn.className="mini-btn danger";
+  removeBtn.title="Remove";
+  removeBtn.innerHTML=ICON_TRASH; // Safe: hardcoded
+  removeBtn.onclick=()=>removeFile(i); // Safe: closure-based
+  actions.appendChild(removeBtn);
 }
 
 function progress(done,total){
@@ -730,6 +765,22 @@ async function generateWrapper(){
   if(!selected){ alert("Please select reference frame"); return; }
 
   if(!files.length){ alert("Please upload image"); return; }
+
+  // Validate file count and size limits (prevent DoS/cost overruns)
+  const MAX_FILES = 5;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
+  
+  if(files.length > MAX_FILES){
+    alert(`Maximum ${MAX_FILES} files allowed. You have ${files.length}`);
+    return;
+  }
+  
+  for(let f of files){
+    if(f.size > MAX_FILE_SIZE){
+      alert(`File "${f.name}" exceeds ${(MAX_FILE_SIZE/(1024*1024)).toFixed(1)}MB limit`);
+      return;
+    }
+  }
 
   running=true;
 
