@@ -76,6 +76,39 @@
     /* ── Typography ── */
     .heading-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
     .heading-sub   { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      margin: 0 -16px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      flex: 1;
+      height: 48px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 400;
+      font-family: inherit;
+      cursor: pointer;
+      border-bottom: none;
+      transition: color 0.12s, font-weight 0.12s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
     .section-label {
       display: block;
       font-size: 10px; font-weight: 600; color: var(--text-secondary);
@@ -176,16 +209,49 @@
     #clearBtn:hover:not(:disabled) { background: var(--bg-hover); }
     #clearBtn:disabled              { opacity: 0.5; cursor: not-allowed; }
 
-    #logBtn {
+    /* ── Configuration ── */
+    .endpoint-row {
+      display: flex; align-items: center; gap: 8px;
       height: 32px; padding: 0 10px;
-      border-radius: 6px; border: 1px solid var(--border);
-      background: var(--bg-input);
-      color: var(--text); font-size: 14px; font-weight: 400;
-      cursor: pointer; font-family: inherit;
-      transition: background 0.1s;
+      border: 1px solid var(--border);
+      border-radius: 6px; background: var(--bg-input);
+      transition: border-color 0.15s;
     }
-    #logBtn:hover:not(:disabled) { background: var(--bg-hover); }
-    #logBtn:disabled              { opacity: 0.5; cursor: not-allowed; }
+    .endpoint-row:focus-within { border-color: var(--border-focus); }
+    .endpoint-icon {
+      width: 14px; height: 14px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    #endpointInput {
+      flex: 1; height: 100%;
+      border: none; outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 11px;
+      font-family: inherit;
+    }
+    #endpointInput::placeholder { color: var(--text-tertiary); }
+    .config-help {
+      font-size: 10px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-top: -4px;
+    }
+    #connectBtn {
+      width: 100%; height: 32px;
+      border-radius: 6px; border: none;
+      background: var(--blue);
+      color: #fff; font-size: 11px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 0.12s, opacity 0.12s;
+    }
+    #connectBtn:hover:not(:disabled) { background: var(--blue-hover); }
+    #connectBtn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
 
     /* ── Status ── */
     .status { font-size: 11px; color: var(--text-secondary); line-height: 1.5; min-height: 16px; }
@@ -286,64 +352,89 @@
       <div class="heading-sub">By Boat Natthapon</div>
     </div>
 
-    <div class="divider"></div>
-
-    <!-- Selection -->
-    <div>
-      <span class="section-label">Selection</span>
-      <button id="selectBtn" onclick="selectFrame()">Select Reference Frame</button>
+    <div class="tabs">
+      <button id="tabGenerate" class="tab-btn active" type="button">Generate</button>
+      <button id="tabConfig" class="tab-btn" type="button">Configuration</button>
     </div>
 
-    <!-- API Key -->
-    <div>
-      <span class="section-label">OpenAI API Key</span>
-      <div class="api-key-row">
-        <input type="password" id="apiKey" placeholder="sk-••••••••••••••••••••" />
-        <button class="eye-btn" onclick="toggleApiKey()" id="eyeBtn" title="Toggle visibility">
-          <svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    <div id="panelGenerate" class="tab-panel active">
+      <!-- Selection -->
+      <div>
+        <span class="section-label">Selection</span>
+        <button id="selectBtn" onclick="selectFrame()">Select Reference Frame</button>
+      </div>
+
+      <!-- API Key -->
+      <div>
+        <span class="section-label">OpenAI API Key</span>
+        <div class="api-key-row">
+          <input type="password" id="apiKey" placeholder="sk-••••••••••••••••••••" />
+          <button class="eye-btn" onclick="toggleApiKey()" id="eyeBtn" title="Toggle visibility">
+            <svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div>
+        <span class="section-label" id="dropLabel">Reference Images</span>
+        <div class="dropzone" id="dropzone">
+          <svg class="dropzone-upload-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
           </svg>
+          <span class="dropzone-text" id="dropText">Click / Drag / Paste Image</span>
+          <input type="file" id="file" multiple accept="image/*" />
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button id="genBtn" onclick="generateWrapper()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 4-8.5 8.5c-.83.83-.83 2.17 0 3 .83.83 2.17.83 3 0L18 7"/><path d="m15 4 2 2"/><path d="m18 2 4 4"/><path d="m2 18 4 4"/><path d="M20 8l1 1"/><path d="M16 2l2 2"/><path d="M2 20l2-2"/>
+          </svg>
+          Generate
         </button>
+        <button id="clearBtn" onclick="clearUI()">Clear</button>
       </div>
+
+      <!-- Status -->
+      <div id="status" class="status">Idle</div>
+
+      <!-- Progress Bar -->
+      <div class="progress">
+        <div id="bar" class="bar"></div>
+      </div>
+
+      <!-- File List -->
+      <div id="fileList"></div>
     </div>
 
-    <!-- Drop Zone -->
-    <div>
-      <span class="section-label" id="dropLabel">Reference Images</span>
-      <div class="dropzone" id="dropzone">
-        <svg class="dropzone-upload-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
-          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
-        </svg>
-        <span class="dropzone-text" id="dropText">Click / Drag / Paste Image</span>
-        <input type="file" id="file" multiple accept="image/*" />
+    <div id="panelConfig" class="tab-panel">
+      <div>
+        <span class="section-label">Google Sheet Link</span>
+        <div class="endpoint-row">
+          <svg class="endpoint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/>
+            <path d="M13.5 10.5a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.06-1.06"/>
+          </svg>
+          <input id="endpointInput" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit" />
+        </div>
       </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Actions -->
-    <div class="actions">
-      <button id="genBtn" onclick="generateWrapper()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m15 4-8.5 8.5c-.83.83-.83 2.17 0 3 .83.83 2.17.83 3 0L18 7"/><path d="m15 4 2 2"/><path d="m18 2 4 4"/><path d="m2 18 4 4"/><path d="M20 8l1 1"/><path d="M16 2l2 2"/><path d="M2 20l2-2"/>
+      <div class="config-help">Paste your Google Sheet link. Logs will be sent via connector automatically after each generation.</div>
+      <button id="connectBtn" type="button" disabled>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/>
+          <path d="M13.5 10.5a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.06-1.06"/>
         </svg>
-        Generate
+        Connect
       </button>
-      <button id="clearBtn" onclick="clearUI()">Clear</button>
-      <button id="logBtn" onclick="downloadGenerationLog()" title="Download generation log">📊</button>
     </div>
-
-    <!-- Status -->
-    <div id="status" class="status">Idle</div>
-
-    <!-- Progress Bar -->
-    <div class="progress">
-      <div id="bar" class="bar"></div>
-    </div>
-
-    <!-- File List -->
-    <div id="fileList"></div>
 
   </div>
 </div>
@@ -359,6 +450,7 @@ const ICON_EYE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" st
 const ICON_EYEOFF = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
 const ICON_WAND = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4-8.5 8.5c-.83.83-.83 2.17 0 3 .83.83 2.17.83 3 0L18 7"/><path d="m15 4 2 2"/><path d="m18 2 4 4"/><path d="m2 18 4 4"/><path d="M20 8l1 1"/><path d="M16 2l2 2"/><path d="M2 20l2-2"/></svg>`;
 const ICON_CHECKFRAME = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const ICON_LINK = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/><path d="M13.5 10.5a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.06-1.06"/></svg>`;
 
 // ── Core State ─────────────────────────────────────────────────────────────────
 let files = [];
@@ -366,6 +458,80 @@ let fileStates = []; // Track status for each file: waiting/processing/done/erro
 let running = false;
 let startTime = 0;
 let timerInterval;
+let connectorConnected = false;
+let savedSheetLink = "";
+
+function setActiveTab(tab){
+  const isGenerate = tab === "generate";
+  document.getElementById("tabGenerate").classList.toggle("active", isGenerate);
+  document.getElementById("tabConfig").classList.toggle("active", !isGenerate);
+  document.getElementById("panelGenerate").classList.toggle("active", isGenerate);
+  document.getElementById("panelConfig").classList.toggle("active", !isGenerate);
+}
+
+document.getElementById("tabGenerate").addEventListener("click", () => setActiveTab("generate"));
+document.getElementById("tabConfig").addEventListener("click", () => setActiveTab("config"));
+
+const endpointInput = document.getElementById("endpointInput");
+const connectBtn = document.getElementById("connectBtn");
+
+function setConnectorConnected(connected){
+  connectorConnected = !!connected;
+  connectBtn.style.background = connectorConnected ? "var(--green)" : "var(--blue)";
+  connectBtn.innerHTML = connectorConnected ? `${ICON_CHECKFRAME} Connected` : `${ICON_LINK} Connect`;
+}
+
+function refreshConnectButtonState(){
+  const value = endpointInput.value.trim();
+  connectBtn.disabled = value.length === 0;
+  if(value !== savedSheetLink){
+    setConnectorConnected(false);
+  }
+}
+
+endpointInput.addEventListener("input", refreshConnectButtonState);
+
+connectBtn.addEventListener("click", async () => {
+  const sheetUrl = endpointInput.value.trim();
+  if(!sheetUrl){
+    document.getElementById("status").innerText = "❌ Please enter Google Sheet link";
+    return;
+  }
+
+  connectBtn.disabled = true;
+  connectBtn.innerHTML = `<span class="spinner"></span> Connecting`;
+
+  try {
+    const result = await requestLogAction("connector-config-set", { sheetUrl });
+    savedSheetLink = result.sheetUrl || sheetUrl;
+    endpointInput.value = savedSheetLink;
+    setConnectorConnected(true);
+    document.getElementById("status").innerText = "✅ Google Sheet connected";
+  } catch (e) {
+    setConnectorConnected(false);
+    document.getElementById("status").innerText = `❌ Connect failed: ${e.message}`;
+  } finally {
+    refreshConnectButtonState();
+  }
+});
+
+async function initializeConnectorConfig(){
+  try {
+    const data = await requestLogAction("connector-config-get");
+    const sheetUrl = (data.sheetUrl || "").trim();
+    if(sheetUrl){
+      endpointInput.value = sheetUrl;
+      savedSheetLink = sheetUrl;
+      setConnectorConnected(true);
+      return;
+    }
+  } catch (e) {
+    console.warn("[Connector] Could not load saved config:", e.message);
+  }
+
+  setConnectorConnected(false);
+  refreshConnectButtonState();
+}
 
 // ── Eye Toggle ─────────────────────────────────────────────────────────────────
 function toggleApiKey(){
@@ -434,6 +600,9 @@ function setSelected(isSelected){
   btn.innerHTML="✕ Please Select a Frame";
 }
 
+const pendingLogRequests = new Map();
+let logReqSeq = 0;
+
 window.onmessage = (event) => {
   // Strict message validation: type-check and payload validation
   const msg = event.data.pluginMessage;
@@ -445,6 +614,69 @@ window.onmessage = (event) => {
     // Validate payload: selected must be boolean
     if(typeof msg.selected !== "boolean") return;
     setSelected(msg.selected);
+    return;
+  }
+
+  if(msg.type === "logs-get-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(!Array.isArray(msg.logs)) return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    pending.resolve(msg.logs);
+    return;
+  }
+
+  if(msg.type === "logs-save-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.ok !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    if(msg.ok){
+      pending.resolve(true);
+    }else{
+      pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to save log"));
+    }
+    return;
+  }
+
+  if(msg.type === "connector-config-get-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.sheetUrl !== "string") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    pending.resolve({ sheetUrl: msg.sheetUrl });
+    return;
+  }
+
+  if(msg.type === "connector-config-set-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.ok !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    if(msg.ok){
+      pending.resolve({ sheetUrl: typeof msg.sheetUrl === "string" ? msg.sheetUrl : "" });
+    }else{
+      pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Connect failed"));
+    }
+    return;
+  }
+
+  if(msg.type === "connector-log-send-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.ok !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    if(msg.ok){
+      pending.resolve(true);
+    }else{
+      pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to send log"));
+    }
+    return;
   }
   // Ignore unknown message types silently
 };
@@ -775,26 +1007,51 @@ const OPENAI_PROMPT = [
 ].join("\\n");
 
 // ══════════════════════════════════════════════════════════════════════════
-// GENERATION LOG (localStorage + download)
+// GENERATION LOG (figma.clientStorage via backend + download)
 // ══════════════════════════════════════════════════════════════════════════
-const LOG_KEY = "AI_GEN_FORM_LOG";
+function requestLogAction(type, payload = {}){
+  return new Promise((resolve, reject) => {
+    const reqId = ++logReqSeq;
+    pendingLogRequests.set(reqId, { resolve, reject });
 
-function getGenerationLogs(){
-  try {
-    const stored = localStorage.getItem(LOG_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (e) {
-    console.warn("[Log] Could not parse logs:", e.message);
-    return [];
-  }
+    parent.postMessage({
+      pluginMessage: { type, reqId, ...payload }
+    }, "*");
+
+    setTimeout(() => {
+      if(pendingLogRequests.has(reqId)){
+        pendingLogRequests.delete(reqId);
+        reject(new Error("Log request timeout"));
+      }
+    }, 8000);
+  });
 }
 
-function logGeneration(success, failed, filenames, durationSec){
+initializeConnectorConfig();
+
+async function getGenerationLogs(){
+  return await requestLogAction("logs-get");
+}
+
+function formatLocalDate(now){
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatLocalTime(now){
+  const h = String(now.getHours()).padStart(2, "0");
+  const m = String(now.getMinutes()).padStart(2, "0");
+  const s = String(now.getSeconds()).padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
+async function logGeneration(success, failed, durationSec){
   try {
-    const logs = getGenerationLogs();
     const now = new Date();
-    const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
-    const timeStr = now.toTimeString().split(" ")[0]; // HH:MM:SS
+    const dateStr = formatLocalDate(now);
+    const timeStr = formatLocalTime(now);
     
     const entry = {
       date: dateStr,
@@ -803,37 +1060,37 @@ function logGeneration(success, failed, filenames, durationSec){
       success: success,
       failed: failed,
       total: success + failed,
-      filenames: filenames,
       timestamp: now.toISOString()
     };
-    
-    logs.push(entry);
-    localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+
+    await requestLogAction("logs-save", { entry });
+    await requestLogAction("connector-log-send", { entry });
     console.log("[Log] Saved entry:", entry);
   } catch (e) {
     console.error("[Log] Error saving log:", e.message);
   }
 }
 
-function downloadGenerationLog(){
+async function downloadGenerationLog(){
   try {
-    const logs = getGenerationLogs();
+    const logs = await getGenerationLogs();
     const status = document.getElementById("status");
     
     if(logs.length === 0){
       status.innerText = "No logs yet - generate some forms first";
       return;
     }
+
+    const totalDurationSec = logs.reduce((sum, log) => {
+      const sec = Number(log.duration_sec) || 0;
+      return sum + sec;
+    }, 0);
     
-    let content = "=== AI Gen Form - Generation Log ===\n\n";
+    let content = `=== AI Gen Form - Complete Generation Log | Total Duration: ${totalDurationSec} sec ===\n\n`;
     
-    logs.forEach((log, idx) => {
-      content += `[${idx + 1}] ${log.date} ${log.time}\n`;
-      content += `    ⏱ Duration: ${log.duration_sec} sec\n`;
-      content += `    ✅ Success: ${log.success} | ❌ Failed: ${log.failed}\n`;
-      if(log.filenames && log.filenames.length > 0){
-        content += `    📄 Files: ${log.filenames.join(", ")}\n`;
-      }
+    logs.forEach((log) => {
+      content += `${log.date} ${log.time}\n`;
+      content += ` ⏱ Duration: ${Number(log.duration_sec) || 0} sec\n`;
       content += "\n";
     });
     
@@ -842,13 +1099,13 @@ function downloadGenerationLog(){
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "generation_log.txt";
+    a.download = "generation_log_all.txt";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    status.innerText = `✅ Downloaded ${logs.length} log${logs.length !== 1 ? 's' : ''}`;
-    console.log("[Log] Downloaded log file with " + logs.length + " entries");
+    status.innerText = `✅ Downloaded ${logs.length} logs (Total ${totalDurationSec} sec)`;
+    console.log("[Log] Downloaded complete log:", logs.length, "entries");
   } catch (e) {
     console.error("[Log] Error downloading log:", e.message);
     document.getElementById("status").innerText = "❌ Error: " + e.message;
@@ -874,6 +1131,12 @@ async function generateWrapper(){
 
   const selected=document.getElementById("selectBtn").classList.contains("selected");
   if(!selected){ alert("Please select reference frame"); return; }
+
+  if(!connectorConnected){
+    setActiveTab("config");
+    alert("Please connect Google Sheet first");
+    return;
+  }
 
   if(!files.length){ alert("Please upload image"); return; }
 
@@ -987,9 +1250,8 @@ async function generateWrapper(){
   document.getElementById("status").innerText =
     `✅ ${success} Success / ❌ ${fail} Failed • ⏱ ${formatTime(totalSec)}`;
 
-  // Log generation metrics to localStorage
-  const filenamesToLog = files.map(f => f.name.replace(/\.[^/.]+$/, ""));
-  logGeneration(success, fail, filenamesToLog, totalSec);
+  // Log generation metrics via backend storage
+  await logGeneration(success, fail, totalSec);
 
   setTimeout(()=>{
     running=false;
