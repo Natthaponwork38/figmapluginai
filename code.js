@@ -1,4 +1,4 @@
-figma.showUI(__html__, { width: 360, height: 520 });
+figma.showUI(__html__, { width: 360, height: 100 });
 
 let referenceFrame = null;
 let rootWrapper = null;
@@ -50,6 +50,11 @@ function getOrCreateWrapper() {
 // MAIN
 // ==========================
 figma.ui.onmessage = async (msg) => {
+  if (msg.type === "resize") {
+    figma.ui.resize(360, msg.height);
+    return;
+  }
+
   if (msg.type === "select-frame") {
     const node = figma.currentPage.selection[0];
     if (!node || node.type !== "FRAME") {

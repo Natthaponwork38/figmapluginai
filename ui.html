@@ -3,198 +3,441 @@
 <head>
   <meta charset="UTF-8" />
   <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design Tokens (Light) ── */
+    :root {
+      --canvas:        #F0F0F0;
+      --bg:            #FFFFFF;
+      --bg-secondary:  #F5F5F5;
+      --bg-hover:      #EBEBEB;
+      --bg-input:      #FFFFFF;
+      --border:        #E5E5E5;
+      --border-focus:  #18A0FB;
+      --text:          #333333;
+      --text-secondary:#888888;
+      --text-tertiary: #AAAAAA;
+      --blue-light:    #EBF6FF;
+      --green-light:   #EAFAF4;
+      --red-light:     #FEF0ED;
+      --shadow:        0 4px 20px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1);
+      --blue:          #18A0FB;
+      --blue-hover:    #0D8FE8;
+      --green:         #1BC47D;
+      --green-hover:   #17B371;
+      --red:           #F24822;
+      --yellow:        #F59E0B;
+    }
+
+    /* ── Design Tokens (Dark) ── */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas:        #1E1E1E;
+        --bg:            #2C2C2C;
+        --bg-secondary:  #383838;
+        --bg-hover:      #444444;
+        --bg-input:      #1E1E1E;
+        --border:        #3C3C3C;
+        --border-focus:  #18A0FB;
+        --text:          #E5E5E5;
+        --text-secondary:#999999;
+        --text-tertiary: #5C5C5C;
+        --blue-light:    #1A3A52;
+        --green-light:   #1A3D2E;
+        --red-light:     #3D1A15;
+        --shadow:        0 4px 24px rgba(0,0,0,0.55), 0 1px 6px rgba(0,0,0,0.3);
+      }
+    }
+
+    /* ── Base ── */
     body {
       font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      margin: 0;
+    }
+
+    /* ── Plugin Window ── */
+    .plugin-window {
+      width: 360px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Title Bar ── */
+    .title-bar {
+      height: 41px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .title-bar-left { display: flex; align-items: center; gap: 8px; }
+    .title-icon {
+      width: 20px; height: 20px;
+      background: var(--blue);
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .title-name { font-size: 11px; font-weight: 600; color: var(--text); }
+    .title-version {
+      font-size: 10px; color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 6px;
+    }
+    .close-btn {
+      background: transparent; border: none; cursor: pointer;
+      padding: 4px; border-radius: 4px; color: var(--text-secondary);
+      display: flex; align-items: center; transition: background 0.1s;
+    }
+    .close-btn:hover { background: var(--bg-hover); }
+
+    /* ── Body ── */
+    .body {
       padding: 16px;
-      background: #111;
-      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
 
-    h3 { margin-top: 0; }
-
-    input, button, textarea {
-      width: 100%;
-      margin-top: 8px;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      box-sizing: border-box;
-      font-size: 12px;
+    /* ── Typography ── */
+    .heading-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .heading-sub   { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+    .section-label {
+      display: block;
+      font-size: 10px; font-weight: 600; color: var(--text-secondary);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 5px;
     }
 
-    input, textarea {
-      background: #1f1f1f;
-      color: #fff;
-      border: 1px solid #333;
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--border); margin: 0 -16px; }
+
+    /* ── Select Frame Button ── */
+    #selectBtn {
+      width: 100%; height: 32px;
+      border-radius: 6px; border: none;
+      background: var(--blue);
+      color: #fff; font-size: 11px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 0.12s, opacity 0.12s;
+    }
+    #selectBtn:hover:not(:disabled) { background: var(--blue-hover); }
+    #selectBtn.selected             { background: var(--green); }
+    #selectBtn.selected:hover       { background: var(--green-hover); }
+    #selectBtn:disabled             { opacity: 0.55; cursor: not-allowed; }
+
+    /* ── API Key ── */
+    .api-key-row {
+      display: flex; align-items: center; height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 4px; background: var(--bg-input);
+      overflow: hidden; transition: border-color 0.15s;
+    }
+    .api-key-row:focus-within { border-color: var(--border-focus); }
+    .api-key-row input {
+      flex: 1; height: 100%; border: none; outline: none;
+      padding: 0 10px; font-size: 11px; color: var(--text);
+      background: transparent; font-family: inherit;
+    }
+    .api-key-row input::placeholder { color: var(--text-tertiary); }
+    .eye-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 0 10px; color: var(--text-secondary);
+      display: flex; align-items: center;
     }
 
-    button {
-      background: linear-gradient(135deg,#6366f1,#4f46e5);
-      color: white;
-      cursor: pointer;
-      font-weight: 600;
-      transition: 0.2s;
+    /* ── Drop Zone ── */
+    .dropzone {
+      height: 92px;
+      border: 1.5px dashed var(--border);
+      border-radius: 6px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; background: var(--bg-input);
+      transition: all 0.15s; position: relative;
     }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    .dropzone.dragover {
+      border-color: var(--blue);
+      background: var(--blue-light);
     }
+    .dropzone input {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .dropzone-upload-icon { color: var(--text-tertiary); transition: color 0.15s; }
+    .dropzone.dragover .dropzone-upload-icon { color: var(--blue); }
+    .dropzone-text { font-size: 11px; color: var(--text-secondary); transition: color 0.15s; }
+    .dropzone.dragover .dropzone-text { color: var(--blue); }
 
-    button.secondary { background: #333; }
-    button.selected { background: #16a34a; }
+    /* ── Actions ── */
+    .actions { display: flex; gap: 8px; }
 
-    /* 🔥 BUTTON LOADING */
-    button.loading {
-      background: linear-gradient(
-        90deg,
-        #6366f1,
-        #818cf8,
-        #6366f1
-      );
+    #genBtn {
+      flex: 1; height: 32px;
+      border-radius: 6px; border: none;
+      background: var(--blue);
+      color: #fff; font-size: 11px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 0.12s;
+    }
+    #genBtn:hover:not(:disabled) { background: var(--blue-hover); }
+    #genBtn:disabled              { cursor: not-allowed; }
+    #genBtn.loading {
+      background: linear-gradient(90deg, #18A0FB, #5BBFFF, #18A0FB);
       background-size: 200% 100%;
       animation: btnFlow 1.5s linear infinite;
     }
 
-    @keyframes btnFlow {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+    #clearBtn {
+      height: 32px; padding: 0 14px;
+      border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text); font-size: 11px; font-weight: 400;
+      cursor: pointer; white-space: nowrap; font-family: inherit;
+      transition: background 0.1s;
     }
+    #clearBtn:hover:not(:disabled) { background: var(--bg-hover); }
+    #clearBtn:disabled              { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-loading {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
+    /* ── Status ── */
+    .status { font-size: 11px; color: var(--text-secondary); line-height: 1.5; min-height: 16px; }
 
-    .spinner {
-      width: 12px;
-      height: 12px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top: 2px solid #fff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .dropzone {
-      border: 1px dashed #555;
-      padding: 20px;
-      text-align: center;
-      margin-top: 10px;
-      border-radius: 8px;
-      color: #aaa;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .dropzone input {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-    }
-
-    .status { margin-top: 8px; font-size: 12px; }
-
-    .file-item {
-      display:flex;
-      justify-content:space-between;
-      background:#1a1a1a;
-      padding:6px 8px;
-      border-radius:6px;
-      margin-top:4px;
-      font-size:12px;
-    }
-
-    .file-item.waiting { color:#888; }
-    .file-item.processing { color:#facc15; }
-    .file-item.done { color:#22c55e; }
-    .file-item.error { color:#ef4444; }
-
-    .remove, .retry {
-      cursor:pointer;
-      opacity:0.6;
-      margin-left:6px;
-    }
-
+    /* ── Progress Bar ── */
     .progress {
-      margin-top:8px;
-      height:6px;
-      background:#222;
-      border-radius:6px;
-      overflow:hidden;
-      position: relative;
+      height: 4px; background: var(--border);
+      border-radius: 2px; overflow: hidden; position: relative;
     }
-
     .bar {
-      height:100%;
-      width:0%;
-      background:#22c55e;
-      position: relative;
-      overflow: hidden;
+      height: 100%; width: 0%; background: var(--green);
+      border-radius: 2px; position: relative; overflow: hidden;
+      transition: width 0.3s ease;
     }
-
-    .bar::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255,255,255,0.3),
-        transparent
-      );
+    .bar.active::after {
+      content: ""; position: absolute; top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
       animation: shimmer 1.2s infinite;
     }
 
-    .progress.done .bar::after {
-      animation: none;
+    /* ── File List ── */
+    #fileList { display: flex; flex-direction: column; gap: 1px; }
+
+    .file-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 8px; border-radius: 4px;
+      transition: background 0.1s;
+    }
+    .file-item:hover { background: var(--bg-hover); }
+
+    .file-item-left {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; overflow: hidden; flex: 1;
+    }
+    .file-name {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 190px; color: var(--text);
+    }
+    .file-arrow { color: var(--text-tertiary); flex-shrink: 0; }
+    .file-status {
+      display: flex; align-items: center; gap: 3px;
+      font-size: 11px; flex-shrink: 0;
+    }
+    .file-status.waiting    { color: var(--text-secondary); }
+    .file-status.processing { color: var(--yellow); }
+    .file-status.done       { color: var(--green); }
+    .file-status.error      { color: var(--red); }
+
+    .file-actions {
+      display: flex; gap: 2px; flex-shrink: 0;
+      opacity: 0; transition: opacity 0.1s;
+    }
+    .file-item:hover .file-actions { opacity: 1; }
+
+    .mini-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 4px; border-radius: 3px; color: var(--text-secondary);
+      display: flex; align-items: center; transition: all 0.1s;
+    }
+    .mini-btn:hover        { background: var(--bg-hover); color: var(--text); }
+    .mini-btn.danger:hover { background: var(--red-light); color: var(--red); }
+
+    /* ── Spinner (inline status) ── */
+    .status-spinner {
+      display: inline-block; width: 10px; height: 10px;
+      border: 1.5px solid rgba(245, 158, 11, 0.35);
+      border-top-color: #F59E0B;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+      vertical-align: middle;
     }
 
-    @keyframes shimmer {
-      0% { left: -100%; }
-      100% { left: 100%; }
+    /* ── Button Spinner ── */
+    .spinner {
+      display: inline-block; width: 11px; height: 11px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
+
+    /* ── Keyframes ── */
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes shimmer  { 0%{left:-100%} 100%{left:100%} }
+    @keyframes btnFlow  { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   </style>
 </head>
 
 <body>
 
-<h3>Wireframe → Form</h3>
+<div class="plugin-window">
 
-<button id="selectBtn" class="secondary" onclick="selectFrame(); setSelected()">
-  Select Reference Frame
-</button>
+  <!-- Title Bar -->
+  <div class="title-bar">
+    <div class="title-bar-left">
+      <div class="title-icon">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+      </div>
+      <span class="title-name">AI Gen Form</span>
+      <span class="title-version">v1.0</span>
+    </div>
+    <button class="close-btn" onclick="closePlugin()" title="Close">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
 
-<input type="password" id="apiKey" placeholder="OpenAI API Key"/>
+  <!-- Body -->
+  <div class="body">
 
-<div class="dropzone">
-  <div id="dropText">Click / Drag / Paste Image</div>
-  <input type="file" id="file" multiple/>
+    <!-- Heading -->
+    <div>
+      <div class="heading-title">Wireframe → Form</div>
+      <div class="heading-sub">By Boat Natthapon</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Selection -->
+    <div>
+      <span class="section-label">Selection</span>
+      <button id="selectBtn" onclick="selectFrame(); setSelected()">Select Reference Frame</button>
+    </div>
+
+    <!-- API Key -->
+    <div>
+      <span class="section-label">OpenAI API Key</span>
+      <div class="api-key-row">
+        <input type="password" id="apiKey" placeholder="sk-••••••••••••••••••••" />
+        <button class="eye-btn" onclick="toggleApiKey()" id="eyeBtn" title="Toggle visibility">
+          <svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Drop Zone -->
+    <div>
+      <span class="section-label" id="dropLabel">Reference Images</span>
+      <div class="dropzone" id="dropzone">
+        <svg class="dropzone-upload-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+        <span class="dropzone-text" id="dropText">Click / Drag / Paste Image</span>
+        <input type="file" id="file" multiple accept="image/*" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button id="genBtn" onclick="generateWrapper()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 4-8.5 8.5c-.83.83-.83 2.17 0 3 .83.83 2.17.83 3 0L18 7"/><path d="m15 4 2 2"/><path d="m18 2 4 4"/><path d="m2 18 4 4"/><path d="M20 8l1 1"/><path d="M16 2l2 2"/><path d="M2 20l2-2"/>
+        </svg>
+        Generate
+      </button>
+      <button id="clearBtn" onclick="clearUI()">Clear</button>
+    </div>
+
+    <!-- Status -->
+    <div id="status" class="status">Idle</div>
+
+    <!-- Progress Bar -->
+    <div class="progress">
+      <div id="bar" class="bar"></div>
+    </div>
+
+    <!-- File List -->
+    <div id="fileList"></div>
+
+  </div>
 </div>
 
-<button id="genBtn" onclick="generateWrapper()">Generate</button>
-<button class="secondary" onclick="clearUI()">Clear</button>
-
-<div id="status" class="status">Idle</div>
-
-<div class="progress"><div id="bar" class="bar"></div></div>
-
-<div id="fileList"></div>
-
 <script>
+// ── SVG Icons ──────────────────────────────────────────────────────────────────
+const ICON_CLOCK = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+const ICON_CHECK = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+const ICON_XCIRCLE = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+const ICON_RETRY = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>`;
+const ICON_TRASH = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+const ICON_EYE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const ICON_EYEOFF = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+const ICON_WAND = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4-8.5 8.5c-.83.83-.83 2.17 0 3 .83.83 2.17.83 3 0L18 7"/><path d="m15 4 2 2"/><path d="m18 2 4 4"/><path d="m2 18 4 4"/><path d="M20 8l1 1"/><path d="M16 2l2 2"/><path d="M2 20l2-2"/></svg>`;
+const ICON_CHECKFRAME = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+// ── Core State ─────────────────────────────────────────────────────────────────
 let files = [];
 let running = false;
 let startTime = 0;
 let timerInterval;
 
+// ── Eye Toggle ─────────────────────────────────────────────────────────────────
+function toggleApiKey(){
+  const input = document.getElementById("apiKey");
+  const icon  = document.getElementById("eyeIcon");
+  if(input.type === "password"){
+    input.type = "text";
+    icon.outerHTML = `<svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+  } else {
+    input.type = "password";
+    icon.outerHTML = `<svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  }
+}
+
+// ── Close Plugin ───────────────────────────────────────────────────────────────
+function closePlugin(){
+  const win = document.querySelector(".plugin-window");
+  if(win) win.style.display = "none";
+}
+
+// ── Auto Resize ──────────────────────────────────────────────────────────────
+const resizeObserver = new ResizeObserver(() => {
+  const h = document.querySelector(".plugin-window").offsetHeight;
+  parent.postMessage({ pluginMessage: { type: "resize", height: h } }, "*");
+});
+resizeObserver.observe(document.querySelector(".plugin-window"));
+
+// ── Drop Zone Drag Feedback ────────────────────────────────────────────────────
+const dz = document.getElementById("dropzone");
+dz.addEventListener("dragover",  (e) => { e.preventDefault(); dz.classList.add("dragover"); });
+dz.addEventListener("dragleave", ()  => dz.classList.remove("dragover"));
+dz.addEventListener("drop",      (e) => { e.preventDefault(); dz.classList.remove("dragover"); });
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function formatTime(seconds){
   if(seconds < 60){
     return `${seconds} sec`;
@@ -220,13 +463,19 @@ function stopLiveTimer(){
 function setSelected(){
   const btn=document.getElementById("selectBtn");
   btn.classList.add("selected");
-  btn.innerText="Frame Selected ✓";
+  btn.innerHTML=`${ICON_CHECKFRAME} Frame Selected ✓`;
 }
 
 document.getElementById("file").addEventListener("change",(e)=>{
   files = Array.from(e.target.files);
   render();
+  updateDropLabel();
 });
+
+function updateDropLabel(){
+  document.getElementById("dropLabel").textContent =
+    files.length > 0 ? `Reference Images (${files.length})` : "Reference Images";
+}
 
 function render(){
   const list=document.getElementById("fileList");
@@ -235,14 +484,17 @@ function render(){
   files.forEach((f,i)=>{
     const div=document.createElement("div");
     div.id="f"+i;
-    div.className="file-item waiting";
+    div.className="file-item";
 
     div.innerHTML=`
-      <span>${f.name} <b id="status-${i}">→ waiting</b></span>
-      <span>
-        <span onclick="retryFile(${i})">🔁</span>
-        <span onclick="removeFile(${i})">🗑</span>
-      </span>
+      <div class="file-item-left">
+        <span class="file-name">${f.name}</span>
+        <span class="file-arrow">→</span>
+        <span class="file-status waiting" id="status-${i}">${ICON_CLOCK} waiting</span>
+      </div>
+      <div class="file-actions">
+        <button class="mini-btn danger" onclick="removeFile(${i})" title="Remove">${ICON_TRASH}</button>
+      </div>
     `;
 
     list.appendChild(div);
@@ -253,25 +505,43 @@ function removeFile(i){
   if(running) return;
   files.splice(i,1);
   render();
+  updateDropLabel();
 }
 
 function setFileStatus(i,s){
   const el=document.getElementById("f"+i);
   const label=document.getElementById("status-"+i);
 
-  if(el) el.className="file-item "+s;
+  if(!el || !label) return;
 
-  if(label){
-    let text="waiting";
-    if(s==="processing") text="⏳ processing";
-    if(s==="done") text="✅ done";
-    if(s==="error") text="❌ error";
-    label.innerText="→ "+text;
+  label.className="file-status "+s;
+
+  const statusMap = {
+    waiting:    { icon: ICON_CLOCK,   text: "waiting" },
+    processing: { icon: `<span class="status-spinner"></span>`, text: "processing" },
+    done:       { icon: ICON_CHECK,   text: "done" },
+    error:      { icon: ICON_XCIRCLE, text: "error" },
+  };
+  const { icon, text } = statusMap[s] || statusMap.waiting;
+  label.innerHTML = `${icon} ${text}`;
+
+  const actions = el.querySelector(".file-actions");
+  if(s === "error"){
+    actions.innerHTML = `
+      <button class="mini-btn" onclick="retryFile(${i})" title="Retry">${ICON_RETRY}</button>
+      <button class="mini-btn danger" onclick="removeFile(${i})" title="Remove">${ICON_TRASH}</button>
+    `;
+  } else {
+    actions.innerHTML = `
+      <button class="mini-btn danger" onclick="removeFile(${i})" title="Remove">${ICON_TRASH}</button>
+    `;
   }
 }
 
 function progress(done,total){
-  document.getElementById("bar").style.width=(done/total*100)+"%";
+  const bar = document.getElementById("bar");
+  bar.style.width=(done/total*100)+"%";
+  bar.classList.add("active");
 }
 
 function clearUI(){
@@ -279,23 +549,79 @@ function clearUI(){
 
   files=[];
   render();
+  updateDropLabel();
 
   document.getElementById("file").value="";
   document.getElementById("apiKey").value="";
 
   const btn=document.getElementById("selectBtn");
   btn.classList.remove("selected");
-  btn.innerText="Select Reference Frame";
+  btn.innerHTML="Select Reference Frame";
 
   document.getElementById("status").innerText="Idle";
 
-  document.getElementById("bar").style.width="0%";
+  const bar = document.getElementById("bar");
+  bar.style.width="0%";
+  bar.classList.remove("active");
   document.querySelector(".progress").classList.remove("done");
 }
 
 async function retryFile(i){
   if(running) return;
+  const apiKey=document.getElementById("apiKey").value;
+  if(!apiKey){ alert("Please input API Key"); return; }
+
   setFileStatus(i,"processing");
+  const file = files[i];
+
+  try{
+    const base64=await toBase64(file);
+    const res=await fetch("https://api.openai.com/v1/responses",{
+      method:"POST",
+      headers:{
+        "Authorization":"Bearer "+apiKey,
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        model:"gpt-4.1-mini",
+        input:[{
+          role:"user",
+          content:[
+            {type:"input_text",text:OPENAI_PROMPT},
+            {type:"input_image",image_url:"data:image/png;base64,"+base64}
+          ]
+        }]
+      })
+    });
+
+    if(!res.ok){
+      console.error(`[Retry] HTTP ${res.status}:`,res.statusText);
+      setFileStatus(i,"error");
+      return;
+    }
+
+    const data=await res.json();
+    const text=data.output?.[0]?.content?.[0]?.text||"";
+    console.log(`[Retry] ${file.name}:`,text?"✓ OK":"✗ Empty response");
+
+    if(!text){
+      setFileStatus(i,"error");
+      return;
+    }
+
+    parent.postMessage({
+      pluginMessage:{
+        type:"generate",
+        json:text,
+        filename:file.name.replace(/\.[^\/\.]+$/,"")
+      }
+    },"*");
+
+    setFileStatus(i,"done");
+  }catch(e){
+    console.error(`[Retry] ${file.name} error:`,e.message);
+    setFileStatus(i,"error");
+  }
 }
 </script>
 
@@ -437,8 +763,8 @@ async function generateWrapper(){
 
   const btn = document.getElementById("genBtn");
   btn.disabled = true;
-  btn.classList.add("loading","btn-loading");
-  btn.innerHTML = `Generating <span class="spinner"></span>`;
+  btn.classList.add("loading");
+  btn.innerHTML = `<span class="spinner"></span> Generating`;
 
   document.querySelector(".progress").classList.remove("done");
 
@@ -449,52 +775,69 @@ async function generateWrapper(){
   for(let i=0;i<files.length;i++){
     setFileStatus(i,"processing");
 
-    const base64=await toBase64(files[i]);
+    const file = files[i];
 
-    const res=await fetch("https://api.openai.com/v1/responses",{
-      method:"POST",
-      headers:{
-        "Authorization":"Bearer "+apiKey,
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        model:"gpt-4.1-mini",
-        input:[{
-          role:"user",
-          content:[
-            {type:"input_text",text:OPENAI_PROMPT},
-            {type:"input_image",image_url:"data:image/png;base64,"+base64}
-          ]
-        }]
-      })
-    });
-
-    const data=await res.json();
-
-    let text="";
     try{
-      text=data.output?.[0]?.content?.[0]?.text||"";
-    }catch(e){}
-    console.log("AI RAW TEXT >>>", text);
+      const base64=await toBase64(file);
 
-    if(!text){
+      const res=await fetch("https://api.openai.com/v1/responses",{
+        method:"POST",
+        headers:{
+          "Authorization":"Bearer "+apiKey,
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          model:"gpt-4.1-mini",
+          input:[{
+            role:"user",
+            content:[
+              {type:"input_text",text:OPENAI_PROMPT},
+              {type:"input_image",image_url:"data:image/png;base64,"+base64}
+            ]
+          }]
+        })
+      });
+
+      if(!res.ok){
+        console.error(`[Generate] ${file.name} - HTTP ${res.status}: ${res.statusText}`);
+        setFileStatus(i,"error");
+        fail++;
+        done++;
+        progress(done,files.length);
+        continue;
+      }
+
+      const data=await res.json();
+      const text=data.output?.[0]?.content?.[0]?.text||"";
+      console.log(`[Generate] ${file.name}:`,text?`✓ OK (length:${text.length})`:"✗ Empty");
+
+      if(!text){
+        setFileStatus(i,"error");
+        fail++;
+        done++;
+        progress(done,files.length);
+        continue;
+      }
+
+      parent.postMessage({
+        pluginMessage:{
+          type:"generate",
+          json:text,
+          filename:file.name.replace(/\.[^/.]+$/,"")
+        }
+      },"*");
+
+      setFileStatus(i,"done");
+      success++;
+      done++;
+      progress(done,files.length);
+    }catch(e){
+      console.error(`[Generate] ${file.name} error:`,e.message);
       setFileStatus(i,"error");
       fail++;
-      continue;
+      done++;
+      progress(done,files.length);
     }
-
-    parent.postMessage({
-      pluginMessage:{
-        type:"generate",
-        json:text,
-        filename:files[i].name.replace(/\.[^/.]+$/,"")
-      }
-    },"*");
-
-    done++;
-    success++;
-    setFileStatus(i,"done");
-    progress(done,files.length);
   }
 
   stopLiveTimer();
@@ -511,8 +854,8 @@ async function generateWrapper(){
     running=false;
 
     btn.disabled = false;
-    btn.classList.remove("loading","btn-loading");
-    btn.innerText = "Generate";
+    btn.classList.remove("loading");
+    btn.innerHTML = `${ICON_WAND} Generate`;
 
   },800);
 }
