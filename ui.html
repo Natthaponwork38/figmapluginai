@@ -350,6 +350,7 @@ const ICON_CHECKFRAME = `<svg width="13" height="13" viewBox="0 0 24 24" fill="n
 
 // ── Core State ─────────────────────────────────────────────────────────────────
 let files = [];
+let fileStates = []; // Track status for each file: waiting/processing/done/error
 let running = false;
 let startTime = 0;
 let timerInterval;
@@ -438,6 +439,7 @@ window.onmessage = (event) => {
 
 document.getElementById("file").addEventListener("change",(e)=>{
   files = Array.from(e.target.files);
+  fileStates = files.map(() => "waiting"); // Initialize all files as waiting
   render();
   updateDropLabel();
 });
@@ -471,9 +473,21 @@ function render(){
     left.appendChild(arrow);
     
     const statusSpan=document.createElement("span");
-    statusSpan.className="file-status waiting";
+    statusSpan.className="file-status";
     statusSpan.id="status-"+i;
-    statusSpan.innerHTML=`${ICON_CLOCK} waiting`; // Safe: icons are hardcoded
+    
+    // Use stored state instead of hardcoded "waiting"
+    const state = fileStates[i] || "waiting";
+    statusSpan.classList.add(state);
+    
+    const statusMap = {
+      waiting:    { icon: ICON_CLOCK,   text: "waiting" },
+      processing: { icon: `<span class="status-spinner"></span>`, text: "processing" },
+      done:       { icon: ICON_CHECK,   text: "done" },
+      error:      { icon: ICON_XCIRCLE, text: "error" },
+    };
+    const statusInfo = statusMap[state] || statusMap.waiting;
+    statusSpan.innerHTML = `${statusInfo.icon} ${statusInfo.text}`;
     left.appendChild(statusSpan);
     
     // Actions section
@@ -496,6 +510,7 @@ function render(){
 function removeFile(i){
   if(running) return;
   files.splice(i,1);
+  fileStates.splice(i,1); // Remove corresponding state
   render();
   updateDropLabel();
 }
@@ -506,6 +521,9 @@ function setFileStatus(i,s){
 
   if(!el || !label) return;
 
+  // Save state to fileStates so it persists across re-renders
+  fileStates[i] = s;
+  
   label.className="file-status "+s;
 
   const statusMap = {
@@ -547,6 +565,7 @@ function clearUI(){
   if(running) return;
 
   files=[];
+  fileStates=[]; // Clear file states
   render();
   updateDropLabel();
 
