@@ -434,19 +434,6 @@
         <button id="selectBtn" onclick="selectFrame()">Select Reference Frame</button>
       </div>
 
-      <!-- API Key -->
-      <div>
-        <span class="section-label">OpenAI API Key</span>
-        <div class="api-key-row">
-          <input type="password" id="apiKey" placeholder="sk-••••••••••••••••••••" />
-          <button class="eye-btn" onclick="toggleApiKey()" id="eyeBtn" title="Toggle visibility">
-            <svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
       <!-- Drop Zone -->
       <div>
         <span class="section-label" id="dropLabel">Reference Images</span>
@@ -486,6 +473,21 @@
     </div>
 
     <div id="panelConfig" class="tab-panel">
+      <div>
+        <span class="section-label">AI Settings</span>
+        <div class="api-key-row">
+          <input type="password" id="apiKey" placeholder="sk-••••••••••••••••••••" />
+          <button class="eye-btn" onclick="toggleApiKey()" id="eyeBtn" title="Toggle visibility">
+            <svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <span class="section-label">Log Settings</span>
       <div class="config-toggle">
         <div class="config-toggle-text">
           <span class="config-toggle-title">Enable Google Sheet Log Sync</span>
@@ -997,7 +999,7 @@ function clearUI(){
 async function retryFile(i){
   if(running) return;
   const apiKey=document.getElementById("apiKey").value;
-  if(!apiKey){ alert("Please input API Key"); return; }
+  if(!apiKey){ alert("Please input API Key in the Configuration tab"); return; }
 
   const file = files[i];
   setFileStatus(i,"processing");
@@ -1296,7 +1298,7 @@ async function generateWrapper(){
 
   const apiKey=document.getElementById("apiKey").value;
 
-  if(!apiKey){ alert("Please input API Key"); return; }
+  if(!apiKey){ alert("Please input API Key in the Configuration tab"); return; }
   
   // Validate API key format
   if(!apiKey.startsWith("sk-") || apiKey.length < 20){
