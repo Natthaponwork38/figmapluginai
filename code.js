@@ -4,6 +4,7 @@ let referenceFrame = null;
 let rootWrapper = null;
 const LOG_KEY = "AI_GEN_FORM_LOG";
 const SHEET_LINK_KEY = "GOOGLE_SHEET_LINK";
+const LOG_SYNC_ENABLED_KEY = "GOOGLE_SHEET_SYNC_ENABLED";
 const CONNECTOR_ENDPOINT = "https://mfmgdwbxztiprplkgpgc.supabase.co/functions/v1/google-sheet-connector";
 
 function isValidHttpUrl(value) {
@@ -214,6 +215,46 @@ figma.ui.onmessage = async (msg) => {
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to connect Google Sheet"
+      });
+    }
+    return;
+  }
+
+  if (msg.type === "connector-sync-get") {
+    try {
+      const enabled = await figma.clientStorage.getAsync(LOG_SYNC_ENABLED_KEY);
+      figma.ui.postMessage({
+        type: "connector-sync-get-result",
+        reqId: msg.reqId,
+        enabled: Boolean(enabled)
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: "connector-sync-get-result",
+        reqId: msg.reqId,
+        enabled: false,
+        error: err.message || "Failed to read connector sync setting"
+      });
+    }
+    return;
+  }
+
+  if (msg.type === "connector-sync-set") {
+    try {
+      const enabled = Boolean(msg.enabled);
+      await figma.clientStorage.setAsync(LOG_SYNC_ENABLED_KEY, enabled);
+      figma.ui.postMessage({
+        type: "connector-sync-set-result",
+        reqId: msg.reqId,
+        ok: true,
+        enabled
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: "connector-sync-set-result",
+        reqId: msg.reqId,
+        ok: false,
+        error: err.message || "Failed to save connector sync setting"
       });
     }
     return;

@@ -238,6 +238,76 @@
       line-height: 1.4;
       margin-top: -4px;
     }
+    .config-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+    }
+    .config-toggle-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .config-toggle-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .config-toggle-sub {
+      font-size: 10px;
+      color: var(--text-secondary);
+      line-height: 1.2;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #8f8f8f;
+      border-radius: 999px;
+      transition: background 0.2s;
+    }
+    .slider:before {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .switch input:checked + .slider {
+      background: var(--green);
+    }
+    .switch input:checked + .slider:before {
+      transform: translateX(14px);
+    }
+    .endpoint-row.disabled {
+      opacity: 0.6;
+    }
+    #endpointInput:disabled {
+      cursor: not-allowed;
+    }
     #connectBtn {
       width: 100%; height: 32px;
       border-radius: 6px; border: none;
@@ -416,9 +486,19 @@
     </div>
 
     <div id="panelConfig" class="tab-panel">
+      <div class="config-toggle">
+        <div class="config-toggle-text">
+          <span class="config-toggle-title">Enable Google Sheet Log Sync</span>
+          <span class="config-toggle-sub" id="syncToggleHint">Turn ON to sync logs to your Google Sheet.</span>
+        </div>
+        <label class="switch" for="syncToggle">
+          <input id="syncToggle" type="checkbox" />
+          <span class="slider"></span>
+        </label>
+      </div>
       <div>
         <span class="section-label">Google Sheet Link</span>
-        <div class="endpoint-row">
+        <div class="endpoint-row" id="endpointRow">
           <svg class="endpoint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/>
             <path d="M13.5 10.5a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.06-1.06"/>
@@ -426,7 +506,7 @@
           <input id="endpointInput" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit" />
         </div>
       </div>
-      <div class="config-help">Paste your Google Sheet link. Logs will be sent via connector automatically after each generation.</div>
+      <div class="config-help" id="configHelp">Paste your Google Sheet link. Logs will be sent via connector automatically after each generation.</div>
       <button id="connectBtn" type="button" disabled>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/>
@@ -459,6 +539,7 @@ let running = false;
 let startTime = 0;
 let timerInterval;
 let connectorConnected = false;
+let connectorSyncEnabled = false;
 let savedSheetLink = "";
 
 function setActiveTab(tab){
@@ -473,6 +554,10 @@ document.getElementById("tabGenerate").addEventListener("click", () => setActive
 document.getElementById("tabConfig").addEventListener("click", () => setActiveTab("config"));
 
 const endpointInput = document.getElementById("endpointInput");
+const endpointRow = document.getElementById("endpointRow");
+const configHelp = document.getElementById("configHelp");
+const syncToggle = document.getElementById("syncToggle");
+const syncToggleHint = document.getElementById("syncToggleHint");
 const connectBtn = document.getElementById("connectBtn");
 
 function setConnectorConnected(connected){
@@ -482,6 +567,18 @@ function setConnectorConnected(connected){
 }
 
 function refreshConnectButtonState(){
+  if(!connectorSyncEnabled){
+    connectBtn.disabled = true;
+    endpointInput.disabled = true;
+    endpointRow.classList.add("disabled");
+    configHelp.textContent = "Log sync is OFF. Generate works normally without Google Sheet.";
+    return;
+  }
+
+  endpointInput.disabled = false;
+  endpointRow.classList.remove("disabled");
+  configHelp.textContent = "Paste your Google Sheet link. Logs will be sent via connector automatically after each generation.";
+
   const value = endpointInput.value.trim();
   connectBtn.disabled = value.length === 0;
   if(value !== savedSheetLink){
@@ -489,9 +586,42 @@ function refreshConnectButtonState(){
   }
 }
 
+function setConnectorSyncEnabled(enabled){
+  connectorSyncEnabled = !!enabled;
+  syncToggle.checked = connectorSyncEnabled;
+  syncToggleHint.textContent = connectorSyncEnabled
+    ? "Turn ON to sync logs to your Google Sheet."
+    : "Turn OFF to skip Google Sheet connection and still use the plugin.";
+  refreshConnectButtonState();
+}
+
 endpointInput.addEventListener("input", refreshConnectButtonState);
 
+syncToggle.addEventListener("change", async () => {
+  const nextValue = syncToggle.checked;
+  try {
+    const result = await requestLogAction("connector-sync-set", { enabled: nextValue });
+    setConnectorSyncEnabled(result.enabled);
+    if(!result.enabled){
+      document.getElementById("status").innerText = "✅ Google Sheet sync disabled";
+    } else if(connectorConnected) {
+      document.getElementById("status").innerText = "✅ Google Sheet sync enabled";
+    } else {
+      document.getElementById("status").innerText = "⚠ Sync enabled. Connect Google Sheet to start sending logs";
+    }
+  } catch (e) {
+    syncToggle.checked = !nextValue;
+    setConnectorSyncEnabled(!nextValue);
+    document.getElementById("status").innerText = `❌ Failed to update sync setting: ${e.message}`;
+  }
+});
+
 connectBtn.addEventListener("click", async () => {
+  if(!connectorSyncEnabled){
+    document.getElementById("status").innerText = "⚠ Enable Google Sheet Log Sync first";
+    return;
+  }
+
   const sheetUrl = endpointInput.value.trim();
   if(!sheetUrl){
     document.getElementById("status").innerText = "❌ Please enter Google Sheet link";
@@ -531,6 +661,18 @@ async function initializeConnectorConfig(){
 
   setConnectorConnected(false);
   refreshConnectButtonState();
+}
+
+async function initializeConnectorSync(){
+  try {
+    const data = await requestLogAction("connector-sync-get");
+    setConnectorSyncEnabled(!!data.enabled);
+    return;
+  } catch (e) {
+    console.warn("[Connector] Could not load sync toggle:", e.message);
+  }
+
+  setConnectorSyncEnabled(false);
 }
 
 // ── Eye Toggle ─────────────────────────────────────────────────────────────────
@@ -675,6 +817,30 @@ window.onmessage = (event) => {
       pending.resolve(true);
     }else{
       pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to send log"));
+    }
+    return;
+  }
+
+  if(msg.type === "connector-sync-get-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.enabled !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    pending.resolve({ enabled: msg.enabled });
+    return;
+  }
+
+  if(msg.type === "connector-sync-set-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.ok !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    if(msg.ok){
+      pending.resolve({ enabled: Boolean(msg.enabled) });
+    }else{
+      pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to update sync setting"));
     }
     return;
   }
@@ -1027,7 +1193,12 @@ function requestLogAction(type, payload = {}){
   });
 }
 
-initializeConnectorConfig();
+async function initializeConnectorSettings(){
+  await initializeConnectorSync();
+  await initializeConnectorConfig();
+}
+
+initializeConnectorSettings();
 
 async function getGenerationLogs(){
   return await requestLogAction("logs-get");
@@ -1064,7 +1235,11 @@ async function logGeneration(success, failed, durationSec){
     };
 
     await requestLogAction("logs-save", { entry });
-    await requestLogAction("connector-log-send", { entry });
+
+    if(connectorSyncEnabled && connectorConnected){
+      await requestLogAction("connector-log-send", { entry });
+    }
+
     console.log("[Log] Saved entry:", entry);
   } catch (e) {
     console.error("[Log] Error saving log:", e.message);
@@ -1132,7 +1307,7 @@ async function generateWrapper(){
   const selected=document.getElementById("selectBtn").classList.contains("selected");
   if(!selected){ alert("Please select reference frame"); return; }
 
-  if(!connectorConnected){
+  if(connectorSyncEnabled && !connectorConnected){
     setActiveTab("config");
     alert("Please connect Google Sheet first");
     return;
