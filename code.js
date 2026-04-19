@@ -5,6 +5,7 @@ let rootWrapper = null;
 const LOG_KEY = "AI_GEN_FORM_LOG";
 const SHEET_LINK_KEY = "GOOGLE_SHEET_LINK";
 const LOG_SYNC_ENABLED_KEY = "GOOGLE_SHEET_SYNC_ENABLED";
+const OPENAI_API_KEY_KEY = "OPENAI_API_KEY";
 const CONNECTOR_ENDPOINT = "https://mfmgdwbxztiprplkgpgc.supabase.co/functions/v1/google-sheet-connector";
 
 function isValidHttpUrl(value) {
@@ -158,6 +159,45 @@ figma.ui.onmessage = async (msg) => {
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to save log"
+      });
+    }
+    return;
+  }
+
+  if (msg.type === "api-key-get") {
+    try {
+      const apiKey = await figma.clientStorage.getAsync(OPENAI_API_KEY_KEY);
+      figma.ui.postMessage({
+        type: "api-key-get-result",
+        reqId: msg.reqId,
+        apiKey: typeof apiKey === "string" ? apiKey : ""
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: "api-key-get-result",
+        reqId: msg.reqId,
+        apiKey: "",
+        error: err.message || "Failed to read API key"
+      });
+    }
+    return;
+  }
+
+  if (msg.type === "api-key-set") {
+    try {
+      const apiKey = typeof msg.apiKey === "string" ? msg.apiKey.trim() : "";
+      await figma.clientStorage.setAsync(OPENAI_API_KEY_KEY, apiKey);
+      figma.ui.postMessage({
+        type: "api-key-set-result",
+        reqId: msg.reqId,
+        ok: true
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: "api-key-set-result",
+        reqId: msg.reqId,
+        ok: false,
+        error: err.message || "Failed to save API key"
       });
     }
     return;

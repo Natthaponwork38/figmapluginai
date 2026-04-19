@@ -230,6 +230,8 @@
       color: var(--text);
       font-size: 11px;
       font-family: inherit;
+      min-width: 0;
+      text-overflow: ellipsis;
     }
     #endpointInput::placeholder { color: var(--text-tertiary); }
     .config-help {
@@ -237,6 +239,9 @@
       color: var(--text-secondary);
       line-height: 1.4;
       margin-top: -4px;
+    }
+    .config-help-ai {
+      margin-top: 6px;
     }
     .config-toggle {
       display: flex;
@@ -474,7 +479,7 @@
 
     <div id="panelConfig" class="tab-panel">
       <div>
-        <span class="section-label">AI Settings</span>
+        <span class="section-label">AI Settings (OpenAI Key)</span>
         <div class="api-key-row">
           <input type="password" id="apiKey" placeholder="sk-••••••••••••••••••••" />
           <button class="eye-btn" onclick="toggleApiKey()" id="eyeBtn" title="Toggle visibility">
@@ -483,6 +488,7 @@
             </svg>
           </button>
         </div>
+        <div class="config-help config-help-ai">API key is stored locally in this plugin on your device.</div>
       </div>
 
       <div class="divider"></div>
@@ -556,6 +562,7 @@ document.getElementById("tabGenerate").addEventListener("click", () => setActive
 document.getElementById("tabConfig").addEventListener("click", () => setActiveTab("config"));
 
 const endpointInput = document.getElementById("endpointInput");
+const apiKeyInput = document.getElementById("apiKey");
 const endpointRow = document.getElementById("endpointRow");
 const configHelp = document.getElementById("configHelp");
 const syncToggle = document.getElementById("syncToggle");
@@ -598,6 +605,22 @@ function setConnectorSyncEnabled(enabled){
 }
 
 endpointInput.addEventListener("input", refreshConnectButtonState);
+
+let apiKeySaveTimer;
+
+function scheduleApiKeySave(){
+  clearTimeout(apiKeySaveTimer);
+  apiKeySaveTimer = setTimeout(async () => {
+    try {
+      await requestLogAction("api-key-set", { apiKey: apiKeyInput.value || "" });
+    } catch (e) {
+      console.warn("[Config] Failed to persist API key:", e.message);
+    }
+  }, 300);
+}
+
+apiKeyInput.addEventListener("input", scheduleApiKeySave);
+apiKeyInput.addEventListener("blur", scheduleApiKeySave);
 
 syncToggle.addEventListener("change", async () => {
   const nextValue = syncToggle.checked;
@@ -663,6 +686,17 @@ async function initializeConnectorConfig(){
 
   setConnectorConnected(false);
   refreshConnectButtonState();
+}
+
+async function initializeApiKeyConfig(){
+  try {
+    const data = await requestLogAction("api-key-get");
+    if(typeof data.apiKey === "string"){
+      apiKeyInput.value = data.apiKey;
+    }
+  } catch (e) {
+    console.warn("[Config] Could not load API key:", e.message);
+  }
 }
 
 async function initializeConnectorSync(){
@@ -781,6 +815,30 @@ window.onmessage = (event) => {
       pending.resolve(true);
     }else{
       pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to save log"));
+    }
+    return;
+  }
+
+  if(msg.type === "api-key-get-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.apiKey !== "string") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    pending.resolve({ apiKey: msg.apiKey });
+    return;
+  }
+
+  if(msg.type === "api-key-set-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.ok !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    if(msg.ok){
+      pending.resolve(true);
+    } else {
+      pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to save API key"));
     }
     return;
   }
@@ -982,7 +1040,6 @@ function clearUI(){
   updateDropLabel();
 
   document.getElementById("file").value="";
-  document.getElementById("apiKey").value="";
 
   const btn=document.getElementById("selectBtn");
   btn.classList.remove("selected");
@@ -1196,6 +1253,7 @@ function requestLogAction(type, payload = {}){
 }
 
 async function initializeConnectorSettings(){
+  await initializeApiKeyConfig();
   await initializeConnectorSync();
   await initializeConnectorConfig();
 }
