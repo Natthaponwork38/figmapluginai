@@ -424,10 +424,14 @@ function closePlugin(){
   if(win) win.style.display = "none";
 }
 
-// ── Auto Resize ──────────────────────────────────────────────────────────────
+// ── Auto Resize (with debounce to avoid spam) ────────────────────────────────
+let resizeTimeout;
 const resizeObserver = new ResizeObserver(() => {
-  const h = document.querySelector(".plugin-window").offsetHeight;
-  parent.postMessage({ pluginMessage: { type: "resize", height: h } }, "*");
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    const h = document.querySelector(".plugin-window").offsetHeight;
+    parent.postMessage({ pluginMessage: { type: "resize", height: h } }, "*");
+  }, 100); // Throttle to 100ms
 });
 resizeObserver.observe(document.querySelector(".plugin-window"));
 
@@ -571,8 +575,9 @@ async function retryFile(i){
   const apiKey=document.getElementById("apiKey").value;
   if(!apiKey){ alert("Please input API Key"); return; }
 
-  setFileStatus(i,"processing");
   const file = files[i];
+  setFileStatus(i,"processing");
+  document.getElementById("status").innerText = `⏳ Retrying... ${file.name}`;
 
   try{
     const base64=await toBase64(file);
@@ -595,17 +600,19 @@ async function retryFile(i){
     });
 
     if(!res.ok){
-      console.error(`[Retry] HTTP ${res.status}:`,res.statusText);
+      console.error(`[Retry] ${file.name} - HTTP ${res.status}: ${res.statusText}`);
       setFileStatus(i,"error");
+      document.getElementById("status").innerText = `❌ Retry failed: HTTP ${res.status}`;
       return;
     }
 
     const data=await res.json();
     const text=data.output?.[0]?.content?.[0]?.text||"";
-    console.log(`[Retry] ${file.name}:`,text?"✓ OK":"✗ Empty response");
+    console.log(`[Retry] ${file.name}:`,text?`✓ OK (length:${text.length})`:"✗ Empty");
 
     if(!text){
       setFileStatus(i,"error");
+      document.getElementById("status").innerText = `❌ Retry returned empty response`;
       return;
     }
 
@@ -618,9 +625,11 @@ async function retryFile(i){
     },"*");
 
     setFileStatus(i,"done");
+    document.getElementById("status").innerText = `✅ Retry successful: ${file.name}`;
   }catch(e){
     console.error(`[Retry] ${file.name} error:`,e.message);
     setFileStatus(i,"error");
+    document.getElementById("status").innerText = `❌ Retry error: ${e.message}`;
   }
 }
 </script>
@@ -750,6 +759,12 @@ async function generateWrapper(){
   const apiKey=document.getElementById("apiKey").value;
 
   if(!apiKey){ alert("Please input API Key"); return; }
+  
+  // Validate API key format
+  if(!apiKey.startsWith("sk-") || apiKey.length < 20){
+    alert("Invalid API Key format (should start with 'sk-')");
+    return;
+  }
 
   const selected=document.getElementById("selectBtn").classList.contains("selected");
   if(!selected){ alert("Please select reference frame"); return; }

@@ -72,6 +72,13 @@ figma.ui.onmessage = async (msg) => {
         return;
       }
 
+      // Check reference frame still exists
+      if (!referenceFrame.parent) {
+        figma.notify("Reference frame was deleted");
+        referenceFrame = null;
+        return;
+      }
+
       const wrapper = getOrCreateWrapper();
 
       const clean = msg.json
@@ -79,7 +86,37 @@ figma.ui.onmessage = async (msg) => {
         .replace(/```/g, "")
         .trim();
 
-      const fields = JSON.parse(clean);
+      let fields;
+      try {
+        fields = JSON.parse(clean);
+      } catch (parseErr) {
+        figma.notify(`Invalid JSON: ${parseErr.message}`);
+        console.error("[Generate] JSON parse error:", parseErr.message);
+        return;
+      }
+
+      // Validate schema
+      if (!Array.isArray(fields)) {
+        figma.notify("Response must be an array of fields");
+        console.error("[Generate] Response is not an array");
+        return;
+      }
+
+      if (fields.length === 0) {
+        figma.notify("No fields extracted from image");
+        console.warn("[Generate] Empty fields array");
+        return;
+      }
+
+      // Validate each field has required props
+      for (let i = 0; i < fields.length; i++) {
+        const field = fields[i];
+        if (!field.type || !field.label) {
+          figma.notify(`Field ${i + 1} missing type or label`);
+          console.error(`[Generate] Field ${i} invalid:`, field);
+          return;
+        }
+      }
 
       const newFrame = figma.createFrame();
       newFrame.name = msg.filename || "Generated Form";
@@ -187,7 +224,8 @@ figma.ui.onmessage = async (msg) => {
 
       figma.notify("Generated ✅");
     } catch (err) {
-      figma.notify("Error");
+      console.error("[Generate] Unexpected error:", err.message, err);
+      figma.notify(`Error: ${err.message || "Unknown error"}`);
     }
   }
 };
@@ -234,7 +272,12 @@ function applyValueVariant(instance, hasValue) {
 // ==========================
 async function loadFont(node) {
   if (node.fontName !== figma.mixed) {
-    await figma.loadFontAsync(node.fontName);
+    try {
+      await figma.loadFontAsync(node.fontName);
+    } catch (err) {
+      console.warn(`[Font] Could not load ${node.fontName}: ${err.message}`);
+      // Fallback to system font - text will still render
+    }
   }
 }
 
