@@ -239,6 +239,7 @@
       color: var(--text-secondary);
       line-height: 1.4;
       margin-top: -4px;
+      white-space: pre-line;
     }
     .config-help-ai {
       margin-top: 6px;
@@ -423,7 +424,7 @@
 
     <!-- Heading -->
     <div>
-      <div class="heading-title">Wireframe → Form</div>
+      <div class="heading-title">Wireframe → Form · AI Generator</div>
       <div class="heading-sub">By Boat Natthapon</div>
     </div>
 
@@ -514,7 +515,7 @@
           <input id="endpointInput" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit" />
         </div>
       </div>
-      <div class="config-help" id="configHelp">Paste your Google Sheet link. Logs will be sent via connector automatically after each generation.</div>
+      <div class="config-help" id="configHelp">1. Paste your Google Sheet link.<br>2. Share that Sheet with n.pboat@gmail.com as Editor.<br>3. Click Connect. Logs will sync automatically after each generation.</div>
       <button id="connectBtn" type="button" disabled>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/>
@@ -575,18 +576,26 @@ function setConnectorConnected(connected){
   connectBtn.innerHTML = connectorConnected ? `${ICON_CHECKFRAME} Connected` : `${ICON_LINK} Connect`;
 }
 
+function getConfigHelpText(syncEnabled){
+  if(!syncEnabled){
+    return "1. Log sync is currently OFF.\n2. Turn ON \"Enable Google Sheet Log Sync\" to configure syncing.\n3. You can still generate forms without Google Sheet sync.";
+  }
+
+  return "1. Paste your Google Sheet link.\n2. Share that Sheet with n.pboat@gmail.com as Editor.\n3. Click Connect. Logs will sync automatically after each generation.";
+}
+
 function refreshConnectButtonState(){
   if(!connectorSyncEnabled){
     connectBtn.disabled = true;
     endpointInput.disabled = true;
     endpointRow.classList.add("disabled");
-    configHelp.textContent = "Log sync is OFF. Generate works normally without Google Sheet.";
+    configHelp.textContent = getConfigHelpText(false);
     return;
   }
 
   endpointInput.disabled = false;
   endpointRow.classList.remove("disabled");
-  configHelp.textContent = "Paste your Google Sheet link. Logs will be sent via connector automatically after each generation.";
+  configHelp.textContent = getConfigHelpText(true);
 
   const value = endpointInput.value.trim();
   connectBtn.disabled = value.length === 0;
