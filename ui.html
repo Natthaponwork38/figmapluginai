@@ -818,8 +818,10 @@ function logGeneration(success, failed, filenames, durationSec){
 function downloadGenerationLog(){
   try {
     const logs = getGenerationLogs();
+    const status = document.getElementById("status");
+    
     if(logs.length === 0){
-      alert("No generation logs yet");
+      status.innerText = "No logs yet - generate some forms first";
       return;
     }
     
@@ -845,10 +847,11 @@ function downloadGenerationLog(){
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    console.log("[Log] Downloaded log file");
+    status.innerText = `✅ Downloaded ${logs.length} log${logs.length !== 1 ? 's' : ''}`;
+    console.log("[Log] Downloaded log file with " + logs.length + " entries");
   } catch (e) {
     console.error("[Log] Error downloading log:", e.message);
-    alert("Error downloading log: " + e.message);
+    document.getElementById("status").innerText = "❌ Error: " + e.message;
   }
 }
 
