@@ -128,3 +128,12 @@ Verify component names in the reference frame match supported field types.
 
 Current plugin title: `Wireframe to Form v2.0`
 
+## Latest Updates
+
+- Added `Generate Type` toggle in the Generate tab.
+- `Generate Type` is saved locally and restored on next plugin launch.
+- Generation logs now include `generate_type` with values `Production` or `Test`.
+- Google Sheet log schema updated to support `generate_type`.
+- Sync behavior updated: turning sync OFF and ON again requires clicking `Connect` again.
+- Generate guard kept strict: when sync is ON but not connected, generation is blocked.
+
