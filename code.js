@@ -5,6 +5,8 @@ let rootWrapper = null;
 const LOG_KEY = "AI_GEN_FORM_LOG";
 const SHEET_LINK_KEY = "GOOGLE_SHEET_LINK";
 const LOG_SYNC_ENABLED_KEY = "GOOGLE_SHEET_SYNC_ENABLED";
+const CONNECTOR_CONFIRMED_KEY = "GOOGLE_SHEET_CONNECT_CONFIRMED";
+const GENERATE_TYPE_KEY = "GENERATE_TYPE_PRODUCTION";
 const OPENAI_API_KEY_KEY = "OPENAI_API_KEY";
 const CONNECTOR_ENDPOINT = "https://mfmgdwbxztiprplkgpgc.supabase.co/functions/v1/google-sheet-connector";
 
@@ -203,19 +205,62 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
+  if (msg.type === "generate-type-get") {
+    try {
+      const enabled = await figma.clientStorage.getAsync(GENERATE_TYPE_KEY);
+      figma.ui.postMessage({
+        type: "generate-type-get-result",
+        reqId: msg.reqId,
+        enabled: enabled === undefined ? true : Boolean(enabled)
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: "generate-type-get-result",
+        reqId: msg.reqId,
+        enabled: true,
+        error: err.message || "Failed to read generate type setting"
+      });
+    }
+    return;
+  }
+
+  if (msg.type === "generate-type-set") {
+    try {
+      const enabled = Boolean(msg.enabled);
+      await figma.clientStorage.setAsync(GENERATE_TYPE_KEY, enabled);
+      figma.ui.postMessage({
+        type: "generate-type-set-result",
+        reqId: msg.reqId,
+        ok: true,
+        enabled
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: "generate-type-set-result",
+        reqId: msg.reqId,
+        ok: false,
+        error: err.message || "Failed to save generate type setting"
+      });
+    }
+    return;
+  }
+
   if (msg.type === "connector-config-get") {
     try {
       const sheetUrl = await figma.clientStorage.getAsync(SHEET_LINK_KEY);
+      const connected = await figma.clientStorage.getAsync(CONNECTOR_CONFIRMED_KEY);
       figma.ui.postMessage({
         type: "connector-config-get-result",
         reqId: msg.reqId,
-        sheetUrl: typeof sheetUrl === "string" ? sheetUrl : ""
+        sheetUrl: typeof sheetUrl === "string" ? sheetUrl : "",
+        connected: Boolean(connected)
       });
     } catch (err) {
       figma.ui.postMessage({
         type: "connector-config-get-result",
         reqId: msg.reqId,
         sheetUrl: "",
+        connected: false,
         error: err.message || "Failed to read connector config"
       });
     }
@@ -242,6 +287,7 @@ figma.ui.onmessage = async (msg) => {
         timestamp: new Date().toISOString()
       });
       await figma.clientStorage.setAsync(SHEET_LINK_KEY, sheetUrl);
+      await figma.clientStorage.setAsync(CONNECTOR_CONFIRMED_KEY, true);
 
       figma.ui.postMessage({
         type: "connector-config-set-result",
@@ -283,6 +329,9 @@ figma.ui.onmessage = async (msg) => {
     try {
       const enabled = Boolean(msg.enabled);
       await figma.clientStorage.setAsync(LOG_SYNC_ENABLED_KEY, enabled);
+      if (!enabled) {
+        await figma.clientStorage.setAsync(CONNECTOR_CONFIRMED_KEY, false);
+      }
       figma.ui.postMessage({
         type: "connector-sync-set-result",
         reqId: msg.reqId,

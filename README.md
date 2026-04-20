@@ -25,10 +25,26 @@ This version includes a major UI/UX upgrade aligned to a cleaner Figma plugin de
 - Stateful reference-frame selection from backend validation
 - Batch processing with file-level states: waiting, processing, done, error
 - JSON schema validation before generation
-- Local generation log history and downloadable all-time log file
+- Local generation log history and downloadable all-time log file with `Generate Type`
 - Optional connector-based Google Sheet sync after each generation
 - Auto-resizing plugin panel for smoother Figma workflow
 - OpenAI API key persistence via `figma.clientStorage`
+
+## Generation Log Fields
+
+Each generation saves a log entry locally, and optionally syncs it to Google Sheet.
+
+`Generate Type` is independent from Google Sheet sync. You can switch between `Production` and `Test` even when Google Sheet sync is OFF.
+
+- `date`
+- `time`
+- `duration_sec`
+- `success`
+- `failed`
+- `total`
+- `generate_type` as `Production` or `Test`
+- `timestamp`
+- `source` when synced through the connector
 
 ## Google Sheet Sync (Optional)
 
@@ -40,11 +56,16 @@ When sync is enabled:
 2. Share that Sheet with `n.pboat@gmail.com` as `Editor`.
 3. Click `Connect`.
 4. Logs are sent automatically after each generation.
+5. If you turn sync OFF and later turn it ON again, click `Connect` again to re-confirm before syncing.
 
 When sync is disabled:
 
 - The plugin still works normally for generation.
 - Logs are still stored locally in plugin storage.
+
+Generation guard while sync is ON:
+
+- If Google Sheet sync is ON but not connected, `Generate` is blocked until you click `Connect` successfully.
 
 ## Supported Field Types
 
@@ -80,10 +101,11 @@ The generator maps extracted fields to component names in your selected referenc
 2. Enter OpenAI API key in `AI Settings (OpenAI Key)`.
 3. (Optional) Enable Google Sheet log sync and connect your Sheet.
 4. Go to `Generate` tab.
-5. Select a reference frame containing components named with supported keys.
-6. Upload one or more wireframe images.
-7. Click `Generate`.
-8. Output is created under the `AI Generated Forms` frame.
+5. Use the `Generate Type` toggle: Turn ON = `Production`, Turn OFF = `Test`.
+6. Select a reference frame containing components named with supported keys.
+7. Upload one or more wireframe images.
+8. Click `Generate`.
+9. Output is created under the `AI Generated Forms` frame.
 
 ## Security Notes
 

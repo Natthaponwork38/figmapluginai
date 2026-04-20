@@ -271,6 +271,11 @@
       color: var(--text-secondary);
       line-height: 1.2;
     }
+    .generate-toggle-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
     .switch {
       position: relative;
       display: inline-block;
@@ -455,6 +460,20 @@
 
       <div class="divider"></div>
 
+      <div class="generate-toggle-section">
+        <span class="section-label">Generate Type</span>
+        <div class="config-toggle">
+          <div class="config-toggle-text">
+            <span class="config-toggle-title" id="generateTypeTitle">Production</span>
+            <span class="config-toggle-sub" id="generateTypeHint">Turn ON = Production, Turn OFF = Test</span>
+          </div>
+          <label class="switch" for="generateTypeToggle">
+            <input id="generateTypeToggle" type="checkbox" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
       <!-- Actions -->
       <div class="actions">
         <button id="genBtn" onclick="generateWrapper()">
@@ -550,6 +569,7 @@ let timerInterval;
 let connectorConnected = false;
 let connectorSyncEnabled = false;
 let savedSheetLink = "";
+let generateTypeProduction = true;
 
 function setActiveTab(tab){
   const isGenerate = tab === "generate";
@@ -569,6 +589,20 @@ const configHelp = document.getElementById("configHelp");
 const syncToggle = document.getElementById("syncToggle");
 const syncToggleHint = document.getElementById("syncToggleHint");
 const connectBtn = document.getElementById("connectBtn");
+const generateTypeToggle = document.getElementById("generateTypeToggle");
+const generateTypeTitle = document.getElementById("generateTypeTitle");
+const generateTypeHint = document.getElementById("generateTypeHint");
+
+function getGenerateTypeLabel(enabled){
+  return enabled ? "Production" : "Test";
+}
+
+function setGenerateTypeEnabled(enabled){
+  generateTypeProduction = !!enabled;
+  generateTypeToggle.checked = generateTypeProduction;
+  generateTypeTitle.textContent = getGenerateTypeLabel(generateTypeProduction);
+  generateTypeHint.textContent = "Turn ON = Production, Turn OFF = Test";
+}
 
 function setConnectorConnected(connected){
   connectorConnected = !!connected;
@@ -631,16 +665,30 @@ function scheduleApiKeySave(){
 apiKeyInput.addEventListener("input", scheduleApiKeySave);
 apiKeyInput.addEventListener("blur", scheduleApiKeySave);
 
+generateTypeToggle.addEventListener("change", async () => {
+  const nextValue = generateTypeToggle.checked;
+  try {
+    const result = await requestLogAction("generate-type-set", { enabled: nextValue });
+    setGenerateTypeEnabled(result.enabled);
+    document.getElementById("status").innerText = `✅ Generate Type: ${getGenerateTypeLabel(result.enabled)}`;
+  } catch (e) {
+    generateTypeToggle.checked = !nextValue;
+    setGenerateTypeEnabled(!nextValue);
+    document.getElementById("status").innerText = `❌ Failed to update Generate Type: ${e.message}`;
+  }
+});
+
 syncToggle.addEventListener("change", async () => {
   const nextValue = syncToggle.checked;
   try {
     const result = await requestLogAction("connector-sync-set", { enabled: nextValue });
     setConnectorSyncEnabled(result.enabled);
     if(!result.enabled){
+      setConnectorConnected(false);
       document.getElementById("status").innerText = "✅ Google Sheet sync disabled";
-    } else if(connectorConnected) {
-      document.getElementById("status").innerText = "✅ Google Sheet sync enabled";
     } else {
+      setConnectorConnected(false);
+      refreshConnectButtonState();
       document.getElementById("status").innerText = "⚠ Sync enabled. Connect Google Sheet to start sending logs";
     }
   } catch (e) {
@@ -686,7 +734,8 @@ async function initializeConnectorConfig(){
     if(sheetUrl){
       endpointInput.value = sheetUrl;
       savedSheetLink = sheetUrl;
-      setConnectorConnected(true);
+      setConnectorConnected(Boolean(data.connected));
+      refreshConnectButtonState();
       return;
     }
   } catch (e) {
@@ -718,6 +767,18 @@ async function initializeConnectorSync(){
   }
 
   setConnectorSyncEnabled(false);
+}
+
+async function initializeGenerateType(){
+  try {
+    const data = await requestLogAction("generate-type-get");
+    setGenerateTypeEnabled(data.enabled !== false);
+    return;
+  } catch (e) {
+    console.warn("[Generate Type] Could not load setting:", e.message);
+  }
+
+  setGenerateTypeEnabled(true);
 }
 
 // ── Eye Toggle ─────────────────────────────────────────────────────────────────
@@ -855,10 +916,11 @@ window.onmessage = (event) => {
   if(msg.type === "connector-config-get-result"){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.sheetUrl !== "string") return;
+    if(typeof msg.connected !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
     if(!pending) return;
     pendingLogRequests.delete(msg.reqId);
-    pending.resolve({ sheetUrl: msg.sheetUrl });
+    pending.resolve({ sheetUrl: msg.sheetUrl, connected: msg.connected });
     return;
   }
 
@@ -910,6 +972,30 @@ window.onmessage = (event) => {
       pending.resolve({ enabled: Boolean(msg.enabled) });
     }else{
       pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to update sync setting"));
+    }
+    return;
+  }
+
+  if(msg.type === "generate-type-get-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.enabled !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    pending.resolve({ enabled: msg.enabled });
+    return;
+  }
+
+  if(msg.type === "generate-type-set-result"){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.ok !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    if(msg.ok){
+      pending.resolve({ enabled: Boolean(msg.enabled) });
+    }else{
+      pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to update generate type setting"));
     }
     return;
   }
@@ -1263,6 +1349,7 @@ function requestLogAction(type, payload = {}){
 
 async function initializeConnectorSettings(){
   await initializeApiKeyConfig();
+  await initializeGenerateType();
   await initializeConnectorSync();
   await initializeConnectorConfig();
 }
@@ -1292,10 +1379,12 @@ async function logGeneration(success, failed, durationSec){
     const now = new Date();
     const dateStr = formatLocalDate(now);
     const timeStr = formatLocalTime(now);
+    const generateType = getGenerateTypeLabel(generateTypeProduction);
     
     const entry = {
       date: dateStr,
       time: timeStr,
+      generate_type: generateType,
       duration_sec: durationSec,
       success: success,
       failed: failed,
@@ -1329,13 +1418,22 @@ async function downloadGenerationLog(){
       const sec = Number(log.duration_sec) || 0;
       return sum + sec;
     }, 0);
+
+    const productionCount = logs.filter((log) => (log.generate_type || "Production") === "Production").length;
+    const testCount = logs.length - productionCount;
     
-    let content = `=== AI Gen Form - Complete Generation Log | Total Duration: ${totalDurationSec} sec ===\n\n`;
+    let content = `=== AI Gen Form - Complete Generation Log ===\n`;
+    content += `Total Entries: ${logs.length}\n`;
+    content += `Total Duration: ${totalDurationSec} sec\n`;
+    content += `Production Runs: ${productionCount}\n`;
+    content += `Test Runs: ${testCount}\n\n`;
     
     logs.forEach((log) => {
       content += `${log.date} ${log.time}\n`;
-      content += ` ⏱ Duration: ${Number(log.duration_sec) || 0} sec\n`;
-      content += "\n";
+      content += `Generate Type: ${log.generate_type || "Production"}\n`;
+      content += `Duration: ${Number(log.duration_sec) || 0} sec\n`;
+      content += `Result: ${Number(log.success) || 0} success / ${Number(log.failed) || 0} failed / ${Number(log.total) || 0} total\n`;
+      content += "----------------------------------------\n";
     });
     
     // Create blob and download
@@ -1492,7 +1590,7 @@ async function generateWrapper(){
   document.getElementById("bar").style.width="100%";
 
   document.getElementById("status").innerText =
-    `✅ ${success} Success / ❌ ${fail} Failed • ⏱ ${formatTime(totalSec)}`;
+    `✅ ${success} Success / ❌ ${fail} Failed • 🏷 ${getGenerateTypeLabel(generateTypeProduction)} • ⏱ ${formatTime(totalSec)}`;
 
   // Log generation metrics via backend storage
   await logGeneration(success, fail, totalSec);
