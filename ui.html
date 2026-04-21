@@ -1483,7 +1483,7 @@ async function generateWrapper(){
   if(!files.length){ alert("Please upload image"); return; }
 
   // Validate file count and size limits (prevent DoS/cost overruns)
-  const MAX_FILES = 5;
+  const MAX_FILES = 20; // Max 20 files per generation
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
   
   if(files.length > MAX_FILES){
