@@ -28,6 +28,12 @@
       --green-hover:   #17B371;
       --red:           #F24822;
       --yellow:        #F59E0B;
+      --radius-sm:     4px;
+      --radius-md:     6px;
+      --transition-fast: 0.1s;
+      --transition-base: 0.12s;
+      --transition-slow: 0.15s;
+      --transition-btn-flow: 1.5s;
     }
 
     /* ── Design Tokens (Dark) ── */
@@ -119,37 +125,46 @@
     /* ── Divider ── */
     .divider { height: 1px; background: var(--border); margin: 0 -16px; }
 
-    /* ── Select Frame Button ── */
-    #selectBtn {
-      width: 100%; height: 32px;
-      border-radius: 6px; border: none;
-      background: var(--blue);
-      color: #fff; font-size: 11px; font-weight: 500;
+    /* ── Button Base ── */
+    .btn-base {
+      height: 32px;
+      border-radius: var(--radius-md);
+      border: none;
+      font-size: 11px; font-weight: 500;
       cursor: pointer; font-family: inherit;
       display: flex; align-items: center; justify-content: center; gap: 6px;
-      transition: background 0.12s, opacity 0.12s;
+      transition: background var(--transition-base), opacity var(--transition-base);
+    }
+    .btn-base:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* ── Select Frame Button ── */
+    #selectBtn {
+      width: 100%;
+      background: var(--blue);
+      color: #fff;
     }
     #selectBtn:hover:not(:disabled) { background: var(--blue-hover); }
     #selectBtn.selected             { background: var(--green); }
     #selectBtn.selected:hover       { background: var(--green-hover); }
     #selectBtn.error                { background: var(--red); }
     #selectBtn.error:hover          { background: #db3d1a; }
-    #selectBtn:disabled             { opacity: 0.55; cursor: not-allowed; }
 
-    /* ── API Key ── */
-    .api-key-row {
+    /* ── Input Field Base ── */
+    .input-field {
       display: flex; align-items: center; height: 32px;
       border: 1px solid var(--border);
-      border-radius: 4px; background: var(--bg-input);
-      overflow: hidden; transition: border-color 0.15s;
+      border-radius: var(--radius-sm); background: var(--bg-input);
+      overflow: hidden; transition: border-color var(--transition-slow);
     }
-    .api-key-row:focus-within { border-color: var(--border-focus); }
-    .api-key-row input {
+    .input-field:focus-within { border-color: var(--border-focus); }
+    .input-field input {
       flex: 1; height: 100%; border: none; outline: none;
       padding: 0 10px; font-size: 11px; color: var(--text);
       background: transparent; font-family: inherit;
     }
-    .api-key-row input::placeholder { color: var(--text-tertiary); }
+    .input-field input::placeholder { color: var(--text-tertiary); }
+
+    /* ── API Key ── */
     .eye-btn {
       background: none; border: none; cursor: pointer;
       padding: 0 10px; color: var(--text-secondary);
@@ -160,11 +175,11 @@
     .dropzone {
       height: 92px;
       border: 1.5px dashed var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-md);
       display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 6px;
       cursor: pointer; background: var(--bg-input);
-      transition: all 0.15s; position: relative;
+      transition: all var(--transition-slow); position: relative;
     }
     .dropzone.dragover {
       border-color: var(--blue);
@@ -173,51 +188,42 @@
     .dropzone input {
       position: absolute; inset: 0; opacity: 0; cursor: pointer;
     }
-    .dropzone-upload-icon { color: var(--text-tertiary); transition: color 0.15s; }
+    .dropzone-upload-icon { color: var(--text-tertiary); transition: color var(--transition-slow); }
     .dropzone.dragover .dropzone-upload-icon { color: var(--blue); }
-    .dropzone-text { font-size: 11px; color: var(--text-secondary); transition: color 0.15s; }
+    .dropzone-text { font-size: 11px; color: var(--text-secondary); transition: color var(--transition-slow); }
     .dropzone.dragover .dropzone-text { color: var(--blue); }
 
     /* ── Actions ── */
     .actions { display: flex; gap: 8px; }
 
     #genBtn {
-      flex: 1; height: 32px;
-      border-radius: 6px; border: none;
+      flex: 1;
       background: var(--blue);
-      color: #fff; font-size: 11px; font-weight: 500;
-      cursor: pointer; font-family: inherit;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      transition: background 0.12s;
+      color: #fff;
     }
     #genBtn:hover:not(:disabled) { background: var(--blue-hover); }
     #genBtn:disabled              { cursor: not-allowed; }
     #genBtn.loading {
       background: linear-gradient(90deg, #18A0FB, #5BBFFF, #18A0FB);
       background-size: 200% 100%;
-      animation: btnFlow 1.5s linear infinite;
+      animation: btnFlow var(--transition-btn-flow) linear infinite;
     }
 
     #clearBtn {
-      height: 32px; padding: 0 14px;
-      border-radius: 6px; border: 1px solid var(--border);
+      padding: 0 14px;
+      border: 1px solid var(--border);
       background: var(--bg-input);
       color: var(--text); font-size: 11px; font-weight: 400;
-      cursor: pointer; white-space: nowrap; font-family: inherit;
-      transition: background 0.1s;
+      white-space: nowrap;
+      transition: background var(--transition-fast);
     }
     #clearBtn:hover:not(:disabled) { background: var(--bg-hover); }
     #clearBtn:disabled              { opacity: 0.5; cursor: not-allowed; }
 
     /* ── Configuration ── */
     .endpoint-row {
-      display: flex; align-items: center; gap: 8px;
-      height: 32px; padding: 0 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px; background: var(--bg-input);
-      transition: border-color 0.15s;
+      gap: 8px; padding: 0 10px;
     }
-    .endpoint-row:focus-within { border-color: var(--border-focus); }
     .endpoint-icon {
       width: 14px; height: 14px;
       color: var(--text-secondary);
@@ -251,7 +257,7 @@
       gap: 10px;
       padding: 8px 10px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-md);
       background: var(--bg-secondary);
     }
     .config-toggle-text {
@@ -294,7 +300,7 @@
       inset: 0;
       background: #8f8f8f;
       border-radius: 999px;
-      transition: background 0.2s;
+      transition: background var(--transition-slow);
     }
     .slider:before {
       content: "";
@@ -305,7 +311,7 @@
       top: 3px;
       background: #fff;
       border-radius: 50%;
-      transition: transform 0.2s;
+      transition: transform var(--transition-slow);
     }
     .switch input:checked + .slider {
       background: var(--green);
@@ -320,19 +326,11 @@
       cursor: not-allowed;
     }
     #connectBtn {
-      width: 100%; height: 32px;
-      border-radius: 6px; border: none;
+      width: 100%;
       background: var(--blue);
-      color: #fff; font-size: 11px; font-weight: 500;
-      cursor: pointer; font-family: inherit;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      transition: background 0.12s, opacity 0.12s;
+      color: #fff;
     }
     #connectBtn:hover:not(:disabled) { background: var(--blue-hover); }
-    #connectBtn:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
 
     /* ── Status ── */
     .status { font-size: 11px; color: var(--text-secondary); line-height: 1.5; min-height: 16px; }
@@ -359,8 +357,8 @@
 
     .file-item {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 5px 8px; border-radius: 4px;
-      transition: background 0.1s;
+      padding: 5px 8px; border-radius: var(--radius-sm);
+      transition: background var(--transition-fast);
     }
     .file-item:hover { background: var(--bg-hover); }
 
@@ -384,14 +382,14 @@
 
     .file-actions {
       display: flex; gap: 2px; flex-shrink: 0;
-      opacity: 0; transition: opacity 0.1s;
+      opacity: 0; transition: opacity var(--transition-fast);
     }
     .file-item:hover .file-actions { opacity: 1; }
 
     .mini-btn {
       background: none; border: none; cursor: pointer;
       padding: 4px; border-radius: 3px; color: var(--text-secondary);
-      display: flex; align-items: center; transition: all 0.1s;
+      display: flex; align-items: center; transition: all var(--transition-fast);
     }
     .mini-btn:hover        { background: var(--bg-hover); color: var(--text); }
     .mini-btn.danger:hover { background: var(--red-light); color: var(--red); }
@@ -442,7 +440,7 @@
       <!-- Selection -->
       <div>
         <span class="section-label">Selection</span>
-        <button id="selectBtn" onclick="selectFrame()">Select Reference Frame</button>
+        <button id="selectBtn" class="btn-base" onclick="selectFrame()">Select Reference Frame</button>
       </div>
 
       <!-- Drop Zone -->
@@ -476,13 +474,13 @@
 
       <!-- Actions -->
       <div class="actions">
-        <button id="genBtn" onclick="generateWrapper()">
+        <button id="genBtn" class="btn-base" onclick="generateWrapper()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="m15 4-8.5 8.5c-.83.83-.83 2.17 0 3 .83.83 2.17.83 3 0L18 7"/><path d="m15 4 2 2"/><path d="m18 2 4 4"/><path d="m2 18 4 4"/><path d="M20 8l1 1"/><path d="M16 2l2 2"/><path d="M2 20l2-2"/>
           </svg>
           Generate
         </button>
-        <button id="clearBtn" onclick="clearUI()">Clear</button>
+        <button id="clearBtn" class="btn-base" onclick="clearUI()">Clear</button>
       </div>
 
       <!-- Status -->
@@ -500,7 +498,7 @@
     <div id="panelConfig" class="tab-panel">
       <div>
         <span class="section-label">AI Settings (OpenAI Key)</span>
-        <div class="api-key-row">
+        <div class="api-key-row input-field">
           <input type="password" id="apiKey" placeholder="sk-••••••••••••••••••••" />
           <button class="eye-btn" onclick="toggleApiKey()" id="eyeBtn" title="Toggle visibility">
             <svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -526,7 +524,7 @@
       </div>
       <div>
         <span class="section-label">Google Sheet Link</span>
-        <div class="endpoint-row" id="endpointRow">
+        <div class="endpoint-row input-field" id="endpointRow">
           <svg class="endpoint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/>
             <path d="M13.5 10.5a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.06-1.06"/>
@@ -535,7 +533,7 @@
         </div>
       </div>
       <div class="config-help" id="configHelp">1. Paste your Google Sheet link.<br>2. Share that Sheet with n.pboat@gmail.com as Editor.<br>3. Click Connect. Logs will sync automatically after each generation.</div>
-      <button id="connectBtn" type="button" disabled>
+      <button id="connectBtn" class="btn-base" type="button" disabled>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/>
           <path d="M13.5 10.5a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.06-1.06"/>
@@ -559,6 +557,61 @@ const ICON_EYEOFF = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none"
 const ICON_WAND = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4-8.5 8.5c-.83.83-.83 2.17 0 3 .83.83 2.17.83 3 0L18 7"/><path d="m15 4 2 2"/><path d="m18 2 4 4"/><path d="m2 18 4 4"/><path d="M20 8l1 1"/><path d="M16 2l2 2"/><path d="M2 20l2-2"/></svg>`;
 const ICON_CHECKFRAME = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 const ICON_LINK = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/><path d="M13.5 10.5a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.06-1.06"/></svg>`;
+
+// ── Configuration Constants ────────────────────────────────────────────────────
+const CONFIG = {
+  // API & Endpoints
+  OPENAI_API_ENDPOINT: "https://api.openai.com/v1/responses",
+  OPENAI_API_MODEL: "gpt-4.1-mini",
+  API_KEY_PREFIX: "sk-",
+  API_KEY_MIN_LENGTH: 20,
+
+  // File Upload Limits
+  MAX_FILES: 20,
+  MAX_FILE_SIZE_MB: 5,
+  MAX_FILE_SIZE_BYTES: 5 * 1024 * 1024,
+
+  // Timing (milliseconds)
+  DEBOUNCE_RESIZE_MS: 100,
+  DEBOUNCE_API_KEY_MS: 300,
+  LOG_REQUEST_TIMEOUT_MS: 8000,
+  BUTTON_RESET_DELAY_MS: 800,
+  TIMER_UPDATE_INTERVAL_MS: 1000,
+
+  // UI Classes & Status
+  FILE_STATUSES: ["waiting", "processing", "done", "error"],
+  TAB_NAMES: ["generate", "config"],
+
+  // Message Types (must match code.js)
+  MESSAGE_TYPES: {
+    RESIZE: "resize",
+    SELECT_FRAME: "select-frame",
+    SELECT_FRAME_RESULT: "select-frame-result",
+    LOGS_GET: "logs-get",
+    LOGS_GET_RESULT: "logs-get-result",
+    LOGS_SAVE: "logs-save",
+    LOGS_SAVE_RESULT: "logs-save-result",
+    API_KEY_GET: "api-key-get",
+    API_KEY_GET_RESULT: "api-key-get-result",
+    API_KEY_SET: "api-key-set",
+    API_KEY_SET_RESULT: "api-key-set-result",
+    GENERATE_TYPE_GET: "generate-type-get",
+    GENERATE_TYPE_GET_RESULT: "generate-type-get-result",
+    GENERATE_TYPE_SET: "generate-type-set",
+    GENERATE_TYPE_SET_RESULT: "generate-type-set-result",
+    CONNECTOR_CONFIG_GET: "connector-config-get",
+    CONNECTOR_CONFIG_GET_RESULT: "connector-config-get-result",
+    CONNECTOR_CONFIG_SET: "connector-config-set",
+    CONNECTOR_CONFIG_SET_RESULT: "connector-config-set-result",
+    CONNECTOR_SYNC_GET: "connector-sync-get",
+    CONNECTOR_SYNC_GET_RESULT: "connector-sync-get-result",
+    CONNECTOR_SYNC_SET: "connector-sync-set",
+    CONNECTOR_SYNC_SET_RESULT: "connector-sync-set-result",
+    CONNECTOR_LOG_SEND: "connector-log-send",
+    CONNECTOR_LOG_SEND_RESULT: "connector-log-send-result",
+    GENERATE: "generate",
+  },
+};
 
 // ── Core State ─────────────────────────────────────────────────────────────────
 let files = [];
@@ -655,11 +708,11 @@ function scheduleApiKeySave(){
   clearTimeout(apiKeySaveTimer);
   apiKeySaveTimer = setTimeout(async () => {
     try {
-      await requestLogAction("api-key-set", { apiKey: apiKeyInput.value || "" });
+      await requestLogAction(CONFIG.MESSAGE_TYPES.API_KEY_SET, { apiKey: apiKeyInput.value || "" });
     } catch (e) {
       console.warn("[Config] Failed to persist API key:", e.message);
     }
-  }, 300);
+  }, CONFIG.DEBOUNCE_API_KEY_MS);
 }
 
 apiKeyInput.addEventListener("input", scheduleApiKeySave);
@@ -668,7 +721,7 @@ apiKeyInput.addEventListener("blur", scheduleApiKeySave);
 generateTypeToggle.addEventListener("change", async () => {
   const nextValue = generateTypeToggle.checked;
   try {
-    const result = await requestLogAction("generate-type-set", { enabled: nextValue });
+    const result = await requestLogAction(CONFIG.MESSAGE_TYPES.GENERATE_TYPE_SET, { enabled: nextValue });
     setGenerateTypeEnabled(result.enabled);
     document.getElementById("status").innerText = `✅ Generate Type: ${getGenerateTypeLabel(result.enabled)}`;
   } catch (e) {
@@ -681,7 +734,7 @@ generateTypeToggle.addEventListener("change", async () => {
 syncToggle.addEventListener("change", async () => {
   const nextValue = syncToggle.checked;
   try {
-    const result = await requestLogAction("connector-sync-set", { enabled: nextValue });
+    const result = await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_SYNC_SET, { enabled: nextValue });
     setConnectorSyncEnabled(result.enabled);
     if(!result.enabled){
       setConnectorConnected(false);
@@ -714,7 +767,7 @@ connectBtn.addEventListener("click", async () => {
   connectBtn.innerHTML = `<span class="spinner"></span> Connecting`;
 
   try {
-    const result = await requestLogAction("connector-config-set", { sheetUrl });
+    const result = await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_CONFIG_SET, { sheetUrl });
     savedSheetLink = result.sheetUrl || sheetUrl;
     endpointInput.value = savedSheetLink;
     setConnectorConnected(true);
@@ -729,7 +782,7 @@ connectBtn.addEventListener("click", async () => {
 
 async function initializeConnectorConfig(){
   try {
-    const data = await requestLogAction("connector-config-get");
+    const data = await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_CONFIG_GET);
     const sheetUrl = (data.sheetUrl || "").trim();
     if(sheetUrl){
       endpointInput.value = sheetUrl;
@@ -748,7 +801,7 @@ async function initializeConnectorConfig(){
 
 async function initializeApiKeyConfig(){
   try {
-    const data = await requestLogAction("api-key-get");
+    const data = await requestLogAction(CONFIG.MESSAGE_TYPES.API_KEY_GET);
     if(typeof data.apiKey === "string"){
       apiKeyInput.value = data.apiKey;
     }
@@ -759,7 +812,7 @@ async function initializeApiKeyConfig(){
 
 async function initializeConnectorSync(){
   try {
-    const data = await requestLogAction("connector-sync-get");
+    const data = await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_SYNC_GET);
     setConnectorSyncEnabled(!!data.enabled);
     return;
   } catch (e) {
@@ -771,7 +824,7 @@ async function initializeConnectorSync(){
 
 async function initializeGenerateType(){
   try {
-    const data = await requestLogAction("generate-type-get");
+    const data = await requestLogAction(CONFIG.MESSAGE_TYPES.GENERATE_TYPE_GET);
     setGenerateTypeEnabled(data.enabled !== false);
     return;
   } catch (e) {
@@ -800,8 +853,8 @@ const resizeObserver = new ResizeObserver(() => {
   clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(() => {
     const h = document.querySelector(".plugin-window").offsetHeight;
-    parent.postMessage({ pluginMessage: { type: "resize", height: h } }, "*");
-  }, 100); // Throttle to 100ms
+    parent.postMessage({ pluginMessage: { type: CONFIG.MESSAGE_TYPES.RESIZE, height: h } }, "*");
+  }, CONFIG.DEBOUNCE_RESIZE_MS);
 });
 resizeObserver.observe(document.querySelector(".plugin-window"));
 
@@ -827,7 +880,7 @@ function startLiveTimer(){
     const sec = Math.floor((now - startTime)/1000);
     document.getElementById("status").innerText =
       `⏳ Processing... ${formatTime(sec)}`;
-  },1000);
+  }, CONFIG.TIMER_UPDATE_INTERVAL_MS);
 }
 
 function stopLiveTimer(){
@@ -857,15 +910,15 @@ window.onmessage = (event) => {
   if(!msg || typeof msg !== "object") return;
   if(!msg.type || typeof msg.type !== "string") return;
 
-  // Only process known message types
-  if(msg.type === "select-frame-result"){
-    // Validate payload: selected must be boolean
+  // Select frame result
+  if(msg.type === CONFIG.MESSAGE_TYPES.SELECT_FRAME_RESULT){
     if(typeof msg.selected !== "boolean") return;
     setSelected(msg.selected);
     return;
   }
 
-  if(msg.type === "logs-get-result"){
+  // Logs get result
+  if(msg.type === CONFIG.MESSAGE_TYPES.LOGS_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(!Array.isArray(msg.logs)) return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -875,7 +928,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "logs-save-result"){
+  // Logs save result
+  if(msg.type === CONFIG.MESSAGE_TYPES.LOGS_SAVE_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -889,7 +943,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "api-key-get-result"){
+  // API key get result
+  if(msg.type === CONFIG.MESSAGE_TYPES.API_KEY_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.apiKey !== "string") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -899,7 +954,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "api-key-set-result"){
+  // API key set result
+  if(msg.type === CONFIG.MESSAGE_TYPES.API_KEY_SET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -913,7 +969,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "connector-config-get-result"){
+  // Connector config get result
+  if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_CONFIG_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.sheetUrl !== "string") return;
     if(typeof msg.connected !== "boolean") return;
@@ -924,7 +981,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "connector-config-set-result"){
+  // Connector config set result
+  if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_CONFIG_SET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -938,7 +996,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "connector-log-send-result"){
+  // Connector log send result
+  if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_LOG_SEND_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -952,7 +1011,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "connector-sync-get-result"){
+  // Connector sync get result
+  if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_SYNC_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.enabled !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -962,7 +1022,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "connector-sync-set-result"){
+  // Connector sync set result
+  if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_SYNC_SET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -976,7 +1037,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "generate-type-get-result"){
+  // Generate type get result
+  if(msg.type === CONFIG.MESSAGE_TYPES.GENERATE_TYPE_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.enabled !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -986,7 +1048,8 @@ window.onmessage = (event) => {
     return;
   }
 
-  if(msg.type === "generate-type-set-result"){
+  // Generate type set result
+  if(msg.type === CONFIG.MESSAGE_TYPES.GENERATE_TYPE_SET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
     const pending = pendingLogRequests.get(msg.reqId);
@@ -999,8 +1062,8 @@ window.onmessage = (event) => {
     }
     return;
   }
-  // Ignore unknown message types silently
 };
+
 
 document.getElementById("file").addEventListener("change",(e)=>{
   files = Array.from(e.target.files);
@@ -1159,14 +1222,14 @@ async function retryFile(i){
 
   try{
     const base64=await toBase64(file);
-    const res=await fetch("https://api.openai.com/v1/responses",{
+    const res=await fetch(CONFIG.OPENAI_API_ENDPOINT,{
       method:"POST",
       headers:{
         "Authorization":"Bearer "+apiKey,
         "Content-Type":"application/json"
       },
       body:JSON.stringify({
-        model:"gpt-4.1-mini",
+        model: CONFIG.OPENAI_API_MODEL,
         input:[{
           role:"user",
           content:[
@@ -1196,9 +1259,7 @@ async function retryFile(i){
 
     parent.postMessage({
       pluginMessage:{
-        type:"generate",
-        json:text,
-        filename:file.name.replace(/\.[^\/\.]+$/,"")
+          type: CONFIG.MESSAGE_TYPES.GENERATE,
       }
     },"*");
 
@@ -1343,7 +1404,7 @@ function requestLogAction(type, payload = {}){
         pendingLogRequests.delete(reqId);
         reject(new Error("Log request timeout"));
       }
-    }, 8000);
+    }, CONFIG.LOG_REQUEST_TIMEOUT_MS);
   });
 }
 
@@ -1392,10 +1453,10 @@ async function logGeneration(success, failed, durationSec){
       timestamp: now.toISOString()
     };
 
-    await requestLogAction("logs-save", { entry });
+    await requestLogAction(CONFIG.MESSAGE_TYPES.LOGS_SAVE, { entry });
 
     if(connectorSyncEnabled && connectorConnected){
-      await requestLogAction("connector-log-send", { entry });
+      await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_LOG_SEND, { entry });
     }
 
     console.log("[Log] Saved entry:", entry);
@@ -1455,7 +1516,7 @@ async function downloadGenerationLog(){
 }
 
 function selectFrame(){
-  parent.postMessage({pluginMessage:{type:"select-frame"}},"*");
+  parent.postMessage({pluginMessage:{type: CONFIG.MESSAGE_TYPES.SELECT_FRAME}},"*");
 }
 
 async function generateWrapper(){
@@ -1483,17 +1544,14 @@ async function generateWrapper(){
   if(!files.length){ alert("Please upload image"); return; }
 
   // Validate file count and size limits (prevent DoS/cost overruns)
-  const MAX_FILES = 20; // Max 20 files per generation
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
-  
-  if(files.length > MAX_FILES){
-    alert(`Maximum ${MAX_FILES} files allowed. You have ${files.length}`);
+  if(files.length > CONFIG.MAX_FILES){
+    alert(`Maximum ${CONFIG.MAX_FILES} files allowed. You have ${files.length}`);
     return;
   }
   
   for(let f of files){
-    if(f.size > MAX_FILE_SIZE){
-      alert(`File "${f.name}" exceeds ${(MAX_FILE_SIZE/(1024*1024)).toFixed(1)}MB limit`);
+    if(f.size > CONFIG.MAX_FILE_SIZE_BYTES){
+      alert(`File "${f.name}" exceeds ${CONFIG.MAX_FILE_SIZE_MB}MB limit`);
       return;
     }
   }
@@ -1522,14 +1580,14 @@ async function generateWrapper(){
     try{
       const base64=await toBase64(file);
 
-      const res=await fetch("https://api.openai.com/v1/responses",{
+      const res=await fetch(CONFIG.OPENAI_API_ENDPOINT,{
         method:"POST",
         headers:{
           "Authorization":"Bearer "+apiKey,
           "Content-Type":"application/json"
         },
         body:JSON.stringify({
-          model:"gpt-4.1-mini",
+          model: CONFIG.OPENAI_API_MODEL,
           input:[{
             role:"user",
             content:[
@@ -1602,7 +1660,7 @@ async function generateWrapper(){
     btn.classList.remove("loading");
     btn.innerHTML = `${ICON_WAND} Generate`;
 
-  },800);
+  },CONFIG.BUTTON_RESET_DELAY_MS);
 }
 
 function toBase64(file){
