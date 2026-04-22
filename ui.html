@@ -905,19 +905,19 @@ const pendingLogRequests = new Map();
 let logReqSeq = 0;
 
 window.onmessage = (event) => {
-  // Strict message validation: type-check and payload validation
+  // ── Validate Incoming Message ──
   const msg = event.data.pluginMessage;
   if(!msg || typeof msg !== "object") return;
   if(!msg.type || typeof msg.type !== "string") return;
 
-  // Select frame result
+  // ── Select Reference Frame Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.SELECT_FRAME_RESULT){
     if(typeof msg.selected !== "boolean") return;
     setSelected(msg.selected);
     return;
   }
 
-  // Logs get result
+  // ── Get Stored Logs Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.LOGS_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(!Array.isArray(msg.logs)) return;
@@ -928,7 +928,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // Logs save result
+  // ── Save Log Entry Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.LOGS_SAVE_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
@@ -943,7 +943,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // API key get result
+  // ── Get API Key Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.API_KEY_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.apiKey !== "string") return;
@@ -954,7 +954,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // API key set result
+  // ── Save API Key Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.API_KEY_SET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
@@ -969,7 +969,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // Connector config get result
+  // ── Get Connector Config Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_CONFIG_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.sheetUrl !== "string") return;
@@ -981,7 +981,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // Connector config set result
+  // ── Save Connector Config Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_CONFIG_SET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
@@ -996,7 +996,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // Connector log send result
+  // ── Send Connector Log Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_LOG_SEND_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
@@ -1011,7 +1011,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // Connector sync get result
+  // ── Get Sync Toggle Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_SYNC_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.enabled !== "boolean") return;
@@ -1022,7 +1022,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // Connector sync set result
+  // ── Save Sync Toggle Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_SYNC_SET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;
@@ -1037,7 +1037,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // Generate type get result
+  // ── Get Generate Type Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.GENERATE_TYPE_GET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.enabled !== "boolean") return;
@@ -1048,7 +1048,7 @@ window.onmessage = (event) => {
     return;
   }
 
-  // Generate type set result
+  // ── Save Generate Type Result ──
   if(msg.type === CONFIG.MESSAGE_TYPES.GENERATE_TYPE_SET_RESULT){
     if(typeof msg.reqId !== "number") return;
     if(typeof msg.ok !== "boolean") return;

@@ -21,9 +21,38 @@ function isValidGoogleSheetUrl(value) {
   return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+\/.+/i.test(value.trim());
 }
 
-function normalizeBaseUrl(value) {
-  return String(value || "").trim().replace(/\/+$/, "");
-}
+// ── Message Types (must match CONFIG.MESSAGE_TYPES in ui.html) ───────────────
+const MESSAGE_TYPES = {
+  // Incoming (from ui.html)
+  RESIZE:                    "resize",
+  SELECT_FRAME:              "select-frame",
+  LOGS_GET:                  "logs-get",
+  LOGS_SAVE:                 "logs-save",
+  API_KEY_GET:               "api-key-get",
+  API_KEY_SET:               "api-key-set",
+  GENERATE_TYPE_GET:         "generate-type-get",
+  GENERATE_TYPE_SET:         "generate-type-set",
+  CONNECTOR_CONFIG_GET:      "connector-config-get",
+  CONNECTOR_CONFIG_SET:      "connector-config-set",
+  CONNECTOR_SYNC_GET:        "connector-sync-get",
+  CONNECTOR_SYNC_SET:        "connector-sync-set",
+  CONNECTOR_LOG_SEND:        "connector-log-send",
+  GENERATE:                  "generate",
+
+  // Outgoing (to ui.html)
+  SELECT_FRAME_RESULT:           "select-frame-result",
+  LOGS_GET_RESULT:               "logs-get-result",
+  LOGS_SAVE_RESULT:              "logs-save-result",
+  API_KEY_GET_RESULT:            "api-key-get-result",
+  API_KEY_SET_RESULT:            "api-key-set-result",
+  GENERATE_TYPE_GET_RESULT:      "generate-type-get-result",
+  GENERATE_TYPE_SET_RESULT:      "generate-type-set-result",
+  CONNECTOR_CONFIG_GET_RESULT:   "connector-config-get-result",
+  CONNECTOR_CONFIG_SET_RESULT:   "connector-config-set-result",
+  CONNECTOR_SYNC_GET_RESULT:     "connector-sync-get-result",
+  CONNECTOR_SYNC_SET_RESULT:     "connector-sync-set-result",
+  CONNECTOR_LOG_SEND_RESULT:     "connector-log-send-result",
+};
 
 async function postToConnector(payload) {
   if (!CONNECTOR_ENDPOINT) {
@@ -43,9 +72,7 @@ async function postToConnector(payload) {
   }
 }
 
-// ==========================
-// CREATE / GET WRAPPER
-// ==========================
+// ── Create / Get Wrapper ─────────────────────────────────────────────────────
 function getOrCreateWrapper() {
   try {
     if (
@@ -86,21 +113,21 @@ function getOrCreateWrapper() {
   return frame;
 }
 
-// ==========================
-// MAIN
-// ==========================
+// ── Main Message Handler ──────────────────────────────────────────────────────
 figma.ui.onmessage = async (msg) => {
-  if (msg.type === "resize") {
+  // ── Resize UI ──
+  if (msg.type === MESSAGE_TYPES.RESIZE) {
     figma.ui.resize(360, msg.height);
     return;
   }
 
-  if (msg.type === "select-frame") {
+  // ── Select Reference Frame ──
+  if (msg.type === MESSAGE_TYPES.SELECT_FRAME) {
     const node = figma.currentPage.selection[0];
     if (!node || node.type !== "FRAME") {
       figma.notify("Please select a Frame");
       figma.ui.postMessage({
-        type: "select-frame-result",
+        type: MESSAGE_TYPES.SELECT_FRAME_RESULT,
         selected: false
       });
       return;
@@ -108,22 +135,23 @@ figma.ui.onmessage = async (msg) => {
     referenceFrame = node;
     figma.notify("Reference frame selected");
     figma.ui.postMessage({
-      type: "select-frame-result",
+      type: MESSAGE_TYPES.SELECT_FRAME_RESULT,
       selected: true
     });
   }
 
-  if (msg.type === "logs-get") {
+  // ── Get Stored Logs ──
+  if (msg.type === MESSAGE_TYPES.LOGS_GET) {
     try {
       const logs = await figma.clientStorage.getAsync(LOG_KEY);
       figma.ui.postMessage({
-        type: "logs-get-result",
+        type: MESSAGE_TYPES.LOGS_GET_RESULT,
         reqId: msg.reqId,
         logs: Array.isArray(logs) ? logs : []
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "logs-get-result",
+        type: MESSAGE_TYPES.LOGS_GET_RESULT,
         reqId: msg.reqId,
         logs: [],
         error: err.message || "Failed to read logs"
@@ -132,12 +160,13 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "logs-save") {
+  // ── Save Log Entry ──
+  if (msg.type === MESSAGE_TYPES.LOGS_SAVE) {
     try {
       const entry = msg.entry;
       if (!entry || typeof entry !== "object") {
         figma.ui.postMessage({
-          type: "logs-save-result",
+          type: MESSAGE_TYPES.LOGS_SAVE_RESULT,
           reqId: msg.reqId,
           ok: false,
           error: "Invalid log entry"
@@ -151,13 +180,13 @@ figma.ui.onmessage = async (msg) => {
       await figma.clientStorage.setAsync(LOG_KEY, logs);
 
       figma.ui.postMessage({
-        type: "logs-save-result",
+        type: MESSAGE_TYPES.LOGS_SAVE_RESULT,
         reqId: msg.reqId,
         ok: true
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "logs-save-result",
+        type: MESSAGE_TYPES.LOGS_SAVE_RESULT,
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to save log"
@@ -166,17 +195,18 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "api-key-get") {
+  // ── Get API Key ──
+  if (msg.type === MESSAGE_TYPES.API_KEY_GET) {
     try {
       const apiKey = await figma.clientStorage.getAsync(OPENAI_API_KEY_KEY);
       figma.ui.postMessage({
-        type: "api-key-get-result",
+        type: MESSAGE_TYPES.API_KEY_GET_RESULT,
         reqId: msg.reqId,
         apiKey: typeof apiKey === "string" ? apiKey : ""
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "api-key-get-result",
+        type: MESSAGE_TYPES.API_KEY_GET_RESULT,
         reqId: msg.reqId,
         apiKey: "",
         error: err.message || "Failed to read API key"
@@ -185,18 +215,19 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "api-key-set") {
+  // ── Save API Key ──
+  if (msg.type === MESSAGE_TYPES.API_KEY_SET) {
     try {
       const apiKey = typeof msg.apiKey === "string" ? msg.apiKey.trim() : "";
       await figma.clientStorage.setAsync(OPENAI_API_KEY_KEY, apiKey);
       figma.ui.postMessage({
-        type: "api-key-set-result",
+        type: MESSAGE_TYPES.API_KEY_SET_RESULT,
         reqId: msg.reqId,
         ok: true
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "api-key-set-result",
+        type: MESSAGE_TYPES.API_KEY_SET_RESULT,
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to save API key"
@@ -205,17 +236,18 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "generate-type-get") {
+  // ── Get Generate Type ──
+  if (msg.type === MESSAGE_TYPES.GENERATE_TYPE_GET) {
     try {
       const enabled = await figma.clientStorage.getAsync(GENERATE_TYPE_KEY);
       figma.ui.postMessage({
-        type: "generate-type-get-result",
+        type: MESSAGE_TYPES.GENERATE_TYPE_GET_RESULT,
         reqId: msg.reqId,
         enabled: enabled === undefined ? true : Boolean(enabled)
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "generate-type-get-result",
+        type: MESSAGE_TYPES.GENERATE_TYPE_GET_RESULT,
         reqId: msg.reqId,
         enabled: true,
         error: err.message || "Failed to read generate type setting"
@@ -224,19 +256,20 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "generate-type-set") {
+  // ── Save Generate Type ──
+  if (msg.type === MESSAGE_TYPES.GENERATE_TYPE_SET) {
     try {
       const enabled = Boolean(msg.enabled);
       await figma.clientStorage.setAsync(GENERATE_TYPE_KEY, enabled);
       figma.ui.postMessage({
-        type: "generate-type-set-result",
+        type: MESSAGE_TYPES.GENERATE_TYPE_SET_RESULT,
         reqId: msg.reqId,
         ok: true,
         enabled
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "generate-type-set-result",
+        type: MESSAGE_TYPES.GENERATE_TYPE_SET_RESULT,
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to save generate type setting"
@@ -245,19 +278,20 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "connector-config-get") {
+  // ── Get Connector Config ──
+  if (msg.type === MESSAGE_TYPES.CONNECTOR_CONFIG_GET) {
     try {
       const sheetUrl = await figma.clientStorage.getAsync(SHEET_LINK_KEY);
       const connected = await figma.clientStorage.getAsync(CONNECTOR_CONFIRMED_KEY);
       figma.ui.postMessage({
-        type: "connector-config-get-result",
+        type: MESSAGE_TYPES.CONNECTOR_CONFIG_GET_RESULT,
         reqId: msg.reqId,
         sheetUrl: typeof sheetUrl === "string" ? sheetUrl : "",
         connected: Boolean(connected)
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "connector-config-get-result",
+        type: MESSAGE_TYPES.CONNECTOR_CONFIG_GET_RESULT,
         reqId: msg.reqId,
         sheetUrl: "",
         connected: false,
@@ -267,12 +301,13 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "connector-config-set") {
+  // ── Save Connector Config ──
+  if (msg.type === MESSAGE_TYPES.CONNECTOR_CONFIG_SET) {
     try {
       const sheetUrl = typeof msg.sheetUrl === "string" ? msg.sheetUrl.trim() : "";
       if (!sheetUrl || !isValidGoogleSheetUrl(sheetUrl)) {
         figma.ui.postMessage({
-          type: "connector-config-set-result",
+          type: MESSAGE_TYPES.CONNECTOR_CONFIG_SET_RESULT,
           reqId: msg.reqId,
           ok: false,
           error: "Invalid Google Sheet link"
@@ -290,14 +325,14 @@ figma.ui.onmessage = async (msg) => {
       await figma.clientStorage.setAsync(CONNECTOR_CONFIRMED_KEY, true);
 
       figma.ui.postMessage({
-        type: "connector-config-set-result",
+        type: MESSAGE_TYPES.CONNECTOR_CONFIG_SET_RESULT,
         reqId: msg.reqId,
         ok: true,
         sheetUrl
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "connector-config-set-result",
+        type: MESSAGE_TYPES.CONNECTOR_CONFIG_SET_RESULT,
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to connect Google Sheet"
@@ -306,17 +341,18 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "connector-sync-get") {
+  // ── Get Sync Toggle ──
+  if (msg.type === MESSAGE_TYPES.CONNECTOR_SYNC_GET) {
     try {
       const enabled = await figma.clientStorage.getAsync(LOG_SYNC_ENABLED_KEY);
       figma.ui.postMessage({
-        type: "connector-sync-get-result",
+        type: MESSAGE_TYPES.CONNECTOR_SYNC_GET_RESULT,
         reqId: msg.reqId,
         enabled: Boolean(enabled)
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "connector-sync-get-result",
+        type: MESSAGE_TYPES.CONNECTOR_SYNC_GET_RESULT,
         reqId: msg.reqId,
         enabled: false,
         error: err.message || "Failed to read connector sync setting"
@@ -325,7 +361,8 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "connector-sync-set") {
+  // ── Save Sync Toggle ──
+  if (msg.type === MESSAGE_TYPES.CONNECTOR_SYNC_SET) {
     try {
       const enabled = Boolean(msg.enabled);
       await figma.clientStorage.setAsync(LOG_SYNC_ENABLED_KEY, enabled);
@@ -333,14 +370,14 @@ figma.ui.onmessage = async (msg) => {
         await figma.clientStorage.setAsync(CONNECTOR_CONFIRMED_KEY, false);
       }
       figma.ui.postMessage({
-        type: "connector-sync-set-result",
+        type: MESSAGE_TYPES.CONNECTOR_SYNC_SET_RESULT,
         reqId: msg.reqId,
         ok: true,
         enabled
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "connector-sync-set-result",
+        type: MESSAGE_TYPES.CONNECTOR_SYNC_SET_RESULT,
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to save connector sync setting"
@@ -349,12 +386,13 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "connector-log-send") {
+  // ── Send Connector Log ──
+  if (msg.type === MESSAGE_TYPES.CONNECTOR_LOG_SEND) {
     try {
       const entry = msg.entry;
       if (!entry || typeof entry !== "object") {
         figma.ui.postMessage({
-          type: "connector-log-send-result",
+          type: MESSAGE_TYPES.CONNECTOR_LOG_SEND_RESULT,
           reqId: msg.reqId,
           ok: false,
           error: "Invalid log entry"
@@ -365,7 +403,7 @@ figma.ui.onmessage = async (msg) => {
       const sheetUrl = await figma.clientStorage.getAsync(SHEET_LINK_KEY);
       if (!sheetUrl || typeof sheetUrl !== "string") {
         figma.ui.postMessage({
-          type: "connector-log-send-result",
+          type: MESSAGE_TYPES.CONNECTOR_LOG_SEND_RESULT,
           reqId: msg.reqId,
           ok: false,
           error: "Google Sheet is not configured"
@@ -381,13 +419,13 @@ figma.ui.onmessage = async (msg) => {
       });
 
       figma.ui.postMessage({
-        type: "connector-log-send-result",
+        type: MESSAGE_TYPES.CONNECTOR_LOG_SEND_RESULT,
         reqId: msg.reqId,
         ok: true
       });
     } catch (err) {
       figma.ui.postMessage({
-        type: "connector-log-send-result",
+        type: MESSAGE_TYPES.CONNECTOR_LOG_SEND_RESULT,
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to send log via connector"
@@ -396,19 +434,20 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "generate") {
+  // ── Generate Form From JSON ──
+  if (msg.type === MESSAGE_TYPES.GENERATE) {
     try {
       if (!referenceFrame) {
         figma.notify("No reference frame selected");
         return;
       }
 
-      // Check reference frame still exists
+      // Validate selected reference frame still exists
       if (!referenceFrame.parent) {
         figma.notify("Reference frame was deleted");
         referenceFrame = null;
         figma.ui.postMessage({
-          type: "select-frame-result",
+          type: MESSAGE_TYPES.SELECT_FRAME_RESULT,
           selected: false
         });
         return;
@@ -430,7 +469,7 @@ figma.ui.onmessage = async (msg) => {
         return;
       }
 
-      // Validate schema
+      // Validate response schema shape
       if (!Array.isArray(fields)) {
         figma.notify("Response must be an array of fields");
         console.error("[Generate] Response is not an array");
@@ -443,7 +482,7 @@ figma.ui.onmessage = async (msg) => {
         return;
       }
 
-      // Validate each field has required props
+      // Validate required field properties
       for (let i = 0; i < fields.length; i++) {
         const field = fields[i];
         if (!field.type || !field.label) {
@@ -482,14 +521,10 @@ figma.ui.onmessage = async (msg) => {
           instance = instance.detachInstance();
         }
 
-        // ==========================
-        // LABEL
-        // ==========================
+        // ── Label ──
         await setText(instance, "{LabelName}", field.label);
 
-        // ==========================
-        // VALUE / PLACEHOLDER
-        // ==========================
+        // ── Value / Placeholder ──
         const hasValue =
           field.value !== undefined &&
           field.value !== null &&
@@ -505,16 +540,12 @@ figma.ui.onmessage = async (msg) => {
           applyValueVariant(instance, hasValue);
         }
 
-        // ==========================
-        // NUMBER RANGE FIX
-        // ==========================
+        // ── Number Range Placeholder Fix ──
         if (field.type === "Input_NumberRange" && !hasValue) {
           await setText(instance, "{Placeholder}", "ระบุจำนวน");
         }
 
-        // ==========================
-        // RADIO / CHECKBOX
-        // ==========================
+        // ── Radio / Checkbox Choices ──
         if (
           field.type === "Input_Checkbox" ||
           field.type === "Input_RadioButton"
@@ -522,9 +553,7 @@ figma.ui.onmessage = async (msg) => {
           await buildChoices(instance, field);
         }
 
-        // ==========================
-        // ✅ INPUT UPLOAD (FIX FINAL)
-        // ==========================
+        // ── Upload Condition / Description Variant ──
         if (field.type === "Input_Upload") {
           try {
             const target = instance.findOne(
@@ -565,9 +594,7 @@ figma.ui.onmessage = async (msg) => {
   }
 };
 
-// ==========================
-// VALUE VARIANT
-// ==========================
+// ── Value Variant ─────────────────────────────────────────────────────────────
 function applyValueVariant(instance, hasValue) {
   try {
     const target = instance.findOne(
@@ -602,16 +629,14 @@ function applyValueVariant(instance, hasValue) {
   } catch (e) {}
 }
 
-// ==========================
-// TEXT
-// ==========================
+// ── Text Helpers ──────────────────────────────────────────────────────────────
 async function loadFont(node) {
   if (node.fontName !== figma.mixed) {
     try {
       await figma.loadFontAsync(node.fontName);
     } catch (err) {
       console.warn(`[Font] Could not load ${node.fontName}: ${err.message}`);
-      // Fallback to system font - text will still render
+      // Fallback to system font if loading fails
     }
   }
 }
@@ -632,9 +657,7 @@ async function setText(instance, name, value) {
   node.characters = value || "";
 }
 
-// ==========================
-// CHOICES
-// ==========================
+// ── Choice Helpers ────────────────────────────────────────────────────────────
 function normalizeChoices(choices) {
   if (!choices) return [];
   return choices
