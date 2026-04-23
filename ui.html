@@ -540,6 +540,7 @@
         </svg>
         Connect
       </button>
+
     </div>
 
   </div>
@@ -1062,6 +1063,7 @@ window.onmessage = (event) => {
     }
     return;
   }
+
 };
 
 
@@ -1281,11 +1283,12 @@ const OPENAI_PROMPT = [
 "You are a UI Structure Extraction Engine designed to analyze wireframe images and convert them into structured data that maps EXACTLY to a predefined Figma Design System.",
 
 "OBJECTIVE:",
-"Extract all form fields in TOP-TO-BOTTOM order.",
+"Extract all form elements in TOP-TO-BOTTOM order, including buttons inserted between input fields.",
 
-"OUTPUT FORMAT (STRICT JSON ONLY):",
+"OUTPUT FORMAT (STRICT JSON ONLY, ARRAY ONLY):",
 "[",
 "{",
+'"kind": "field | button",',
 '"id": "field_1",',
 '"label": "string",',
 '"type": "enum",',
@@ -1298,6 +1301,15 @@ const OPENAI_PROMPT = [
 "}",
 "]",
 
+"FOR kind=field:",
+"- Keep field schema as-is: label, type, placeholder, optional value, optional condition, optional choices",
+
+"FOR kind=button:",
+"- type MUST be ButtonAction",
+"- label MUST be the exact visible button text in the wireframe",
+"- placeholder must be null",
+"- choices must be []",
+
 "ALLOWED TYPES:",
 "Input_Text",
 "Input_TextArea",
@@ -1309,6 +1321,13 @@ const OPENAI_PROMPT = [
 "Input_Upload",
 "Input_Checkbox",
 "Input_NumberRange",
+"ButtonAction (only when kind=button)",
+
+"BUTTON DETECTION RULES:",
+"- Detect visual button controls placed between form fields and output them as kind=button",
+"- Keep every detected button in exact vertical order with surrounding fields",
+"- If multiple buttons appear, output all of them in order",
+"- Even with low confidence, still output the best guess (do not skip visible buttons)",
 
 // ==========================
 // VALUE DETECTION
@@ -1371,7 +1390,7 @@ const OPENAI_PROMPT = [
 // GLOBAL RULES
 // ==========================
 "RULES:",
-"- Preserve order",
+"- Preserve exact top-to-bottom order for both fields and buttons",
 "- No hallucination",
 "- No translation",
 "- Correct type classification is more important than guessing placeholder",

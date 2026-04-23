@@ -460,9 +460,9 @@ figma.ui.onmessage = async (msg) => {
         .replace(/```/g, "")
         .trim();
 
-      let fields;
+      let items;
       try {
-        fields = JSON.parse(clean);
+        items = JSON.parse(clean);
       } catch (parseErr) {
         figma.notify(`Invalid JSON: ${parseErr.message}`);
         console.error("[Generate] JSON parse error:", parseErr.message);
@@ -470,26 +470,29 @@ figma.ui.onmessage = async (msg) => {
       }
 
       // Validate response schema shape
-      if (!Array.isArray(fields)) {
-        figma.notify("Response must be an array of fields");
+      if (!Array.isArray(items)) {
+        figma.notify("Response must be an array of elements");
         console.error("[Generate] Response is not an array");
         return;
       }
 
-      if (fields.length === 0) {
-        figma.notify("No fields extracted from image");
-        console.warn("[Generate] Empty fields array");
+      if (items.length === 0) {
+        figma.notify("No elements extracted from image");
+        console.warn("[Generate] Empty elements array");
         return;
       }
 
-      // Validate required field properties
-      for (let i = 0; i < fields.length; i++) {
-        const field = fields[i];
-        if (!field.type || !field.label) {
-          figma.notify(`Field ${i + 1} missing type or label`);
-          console.error(`[Generate] Field ${i} invalid:`, field);
+      const normalizedItems = [];
+
+      // Validate and normalize extracted elements
+      for (let i = 0; i < items.length; i++) {
+        const parsed = normalizeExtractedItem(items[i], i);
+        if (!parsed.ok) {
+          figma.notify(parsed.error);
+          console.error(`[Generate] Element ${i} invalid:`, items[i]);
           return;
         }
+        normalizedItems.push(parsed.item);
       }
 
       const newFrame = figma.createFrame();
@@ -504,12 +507,26 @@ figma.ui.onmessage = async (msg) => {
       newFrame.paddingLeft = 16;
       newFrame.paddingRight = 16;
 
-      for (const field of fields) {
+      const missingComponents = new Set();
+
+      for (const item of normalizedItems) {
         const component = referenceFrame.findOne(
-          (n) => n.type === "COMPONENT" && n.name === field.type
+          (n) => n.type === "COMPONENT" && n.name === item.type
         );
 
-        if (!component) continue;
+        if (!component) {
+          missingComponents.add(item.type);
+          continue;
+        }
+
+        if (item.kind === "button") {
+          const buttonInstance = component.createInstance();
+          await setTextByAliases(buttonInstance, ["{Button}", "Button"], item.label);
+          newFrame.appendChild(buttonInstance);
+          continue;
+        }
+
+        const field = item;
 
         const needDetach =
           field.type === "Input_Checkbox" ||
@@ -584,6 +601,16 @@ figma.ui.onmessage = async (msg) => {
         newFrame.appendChild(instance);
       }
 
+      if (newFrame.children.length === 0) {
+        newFrame.remove();
+        figma.notify("No matching components found in reference frame");
+        return;
+      }
+
+      if (missingComponents.size > 0) {
+        figma.notify(`Missing components: ${Array.from(missingComponents).join(", ")}`);
+      }
+
       wrapper.appendChild(newFrame);
 
       figma.notify("Generated ✅");
@@ -593,6 +620,64 @@ figma.ui.onmessage = async (msg) => {
     }
   }
 };
+
+function normalizeExtractedItem(raw, index) {
+  if (!raw || typeof raw !== "object") {
+    return {
+      ok: false,
+      error: `Element ${index + 1} is invalid`
+    };
+  }
+
+  const kindRaw = typeof raw.kind === "string" ? raw.kind.trim().toLowerCase() : "field";
+
+  if (kindRaw === "button") {
+    const label = typeof raw.label === "string" ? raw.label.trim() : "";
+    const type =
+      typeof raw.type === "string" && raw.type.trim()
+        ? raw.type.trim()
+        : "ButtonAction";
+
+    if (!label) {
+      return {
+        ok: false,
+        error: `Button ${index + 1} missing label`
+      };
+    }
+
+    return {
+      ok: true,
+      item: {
+        kind: "button",
+        type,
+        label
+      }
+    };
+  }
+
+  const type = typeof raw.type === "string" ? raw.type.trim() : "";
+  const label = typeof raw.label === "string" ? raw.label.trim() : "";
+
+  if (!type || !label) {
+    return {
+      ok: false,
+      error: `Field ${index + 1} missing type or label`
+    };
+  }
+
+  return {
+    ok: true,
+    item: {
+      kind: "field",
+      type,
+      label,
+      placeholder: raw.placeholder,
+      value: raw.value,
+      condition: raw.condition,
+      choices: Array.isArray(raw.choices) ? raw.choices : []
+    }
+  };
+}
 
 // ── Value Variant ─────────────────────────────────────────────────────────────
 function applyValueVariant(instance, hasValue) {
@@ -642,19 +727,32 @@ async function loadFont(node) {
 }
 
 async function setText(instance, name, value) {
+  return setTextByAliases(instance, [name], value);
+}
+
+async function setTextByAliases(instance, aliases, value) {
+  if (!Array.isArray(aliases) || aliases.length === 0) return false;
+
   const node = instance.findAll(
     (n) =>
       n.type === "TEXT" &&
       (
-        n.name === name ||
-        (n.characters && n.characters.trim() === name)
+        aliases.includes(n.name) ||
+        (n.characters && aliases.includes(n.characters.trim()))
       )
   )[0];
 
-  if (!node) return;
+  if (!node) return false;
 
   await loadFont(node);
-  node.characters = value || "";
+  node.characters =
+    typeof value === "string"
+      ? value
+      : value === undefined || value === null
+        ? ""
+        : String(value);
+
+  return true;
 }
 
 // ── Choice Helpers ────────────────────────────────────────────────────────────
