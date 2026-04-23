@@ -559,6 +559,17 @@ const ICON_WAND = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" s
 const ICON_CHECKFRAME = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 const ICON_LINK = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.06 1.06"/><path d="M13.5 10.5a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.06-1.06"/></svg>`;
 
+const UPLOAD_INTERNAL_BUTTON_PATTERNS = [
+  /^\+?\s*browse\s*\.*$/i,
+  /^browse\s*\.*$/i,
+  /^เลือกไฟล์$/i,
+  /^อัปโหลด$/i,
+  /^upload$/i,
+  /^attach$/i,
+  /^แนบไฟล์$/i,
+  /^choose\s*file$/i
+];
+
 // ── Configuration Constants ────────────────────────────────────────────────────
 const CONFIG = {
   // API & Endpoints
@@ -873,6 +884,56 @@ function formatTime(seconds){
   const min = Math.floor(seconds / 60);
   const sec = seconds % 60;
   return `${min} min ${sec} sec`;
+}
+
+function sanitizeAiResponseJson(rawText){
+  const clean = String(rawText || "")
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  if(!clean){
+    throw new Error("AI response is empty");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(clean);
+  } catch (e) {
+    throw new Error(`AI response JSON is invalid: ${e.message}`);
+  }
+
+  if(!Array.isArray(parsed)){
+    throw new Error("AI response must be an array");
+  }
+
+  const hasUploadField = parsed.some((item) =>
+    item &&
+    typeof item === "object" &&
+    typeof item.type === "string" &&
+    item.type.trim() === "Input_Upload"
+  );
+
+  const filtered = parsed.filter((item) => {
+    if(!item || typeof item !== "object") return false;
+
+    const kind = typeof item.kind === "string" ? item.kind.trim().toLowerCase() : "field";
+    if(kind !== "button") return true;
+
+    const label = typeof item.label === "string" ? item.label.trim() : "";
+    if(!label) return false;
+
+    const looksUploadInternal = UPLOAD_INTERNAL_BUTTON_PATTERNS.some((pattern) => pattern.test(label));
+    if(looksUploadInternal) return false;
+
+    if(hasUploadField && /(browse|choose\s*file|เลือกไฟล์|upload|attach|แนบไฟล์)/i.test(label)) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return JSON.stringify(filtered);
 }
 
 function startLiveTimer(){
@@ -1259,9 +1320,13 @@ async function retryFile(i){
       return;
     }
 
+    const sanitizedJson = sanitizeAiResponseJson(text);
+
     parent.postMessage({
       pluginMessage:{
           type: CONFIG.MESSAGE_TYPES.GENERATE,
+          json: sanitizedJson,
+          filename: file.name.replace(/\.[^/.]+$/, "")
       }
     },"*");
 
@@ -1309,6 +1374,15 @@ const OPENAI_PROMPT = [
 "- label MUST be the exact visible button text in the wireframe",
 "- placeholder must be null",
 "- choices must be []",
+
+"UPLOAD BUTTON EXCLUSION (CRITICAL):",
+"- If a button label is Browse..., Browse, Choose File, เลือกไฟล์, Upload, Attach, or แนบไฟล์ and it belongs to an upload input",
+"- DO NOT output it as kind=button",
+"- Treat it as internal UI of Input_Upload only",
+
+"ACTION BUTTON RULE:",
+"- Output kind=button only for standalone action buttons outside input controls",
+"- Target action button is usually located on the left-most side of the wireframe section",
 
 "ALLOWED TYPES:",
 "Input_Text",
@@ -1638,10 +1712,22 @@ async function generateWrapper(){
         continue;
       }
 
+      let sanitizedJson;
+      try {
+        sanitizedJson = sanitizeAiResponseJson(text);
+      } catch (sanitizeErr) {
+        console.error(`[Generate] ${file.name} sanitize error:`, sanitizeErr.message);
+        setFileStatus(i,"error");
+        fail++;
+        done++;
+        progress(done,files.length);
+        continue;
+      }
+
       parent.postMessage({
         pluginMessage:{
           type:"generate",
-          json:text,
+          json:sanitizedJson,
           filename:file.name.replace(/\.[^/.]+$/,"")
         }
       },"*");
