@@ -6,6 +6,7 @@ const LOG_KEY = "AI_GEN_FORM_LOG";
 const SHEET_LINK_KEY = "GOOGLE_SHEET_LINK";
 const LOG_SYNC_ENABLED_KEY = "GOOGLE_SHEET_SYNC_ENABLED";
 const CONNECTOR_CONFIRMED_KEY = "GOOGLE_SHEET_CONNECT_CONFIRMED";
+const PENDING_SYNC_LOGS_KEY = "GOOGLE_SHEET_PENDING_LOGS";
 const GENERATE_TYPE_KEY = "GENERATE_TYPE_PRODUCTION";
 const OPENAI_API_KEY_KEY = "OPENAI_API_KEY";
 const CONNECTOR_ENDPOINT = "https://mfmgdwbxztiprplkgpgc.supabase.co/functions/v1/google-sheet-connector";
@@ -36,6 +37,8 @@ const MESSAGE_TYPES = {
   CONNECTOR_CONFIG_SET:      "connector-config-set",
   CONNECTOR_SYNC_GET:        "connector-sync-get",
   CONNECTOR_SYNC_SET:        "connector-sync-set",
+  CONNECTOR_PENDING_GET:     "connector-pending-get",
+  CONNECTOR_PENDING_SET:     "connector-pending-set",
   CONNECTOR_LOG_SEND:        "connector-log-send",
   GENERATE:                  "generate",
 
@@ -51,6 +54,8 @@ const MESSAGE_TYPES = {
   CONNECTOR_CONFIG_SET_RESULT:   "connector-config-set-result",
   CONNECTOR_SYNC_GET_RESULT:     "connector-sync-get-result",
   CONNECTOR_SYNC_SET_RESULT:     "connector-sync-set-result",
+  CONNECTOR_PENDING_GET_RESULT:  "connector-pending-get-result",
+  CONNECTOR_PENDING_SET_RESULT:  "connector-pending-set-result",
   CONNECTOR_LOG_SEND_RESULT:     "connector-log-send-result",
 };
 
@@ -381,6 +386,48 @@ figma.ui.onmessage = async (msg) => {
         reqId: msg.reqId,
         ok: false,
         error: err.message || "Failed to save connector sync setting"
+      });
+    }
+    return;
+  }
+
+  // ── Get Pending Sync Logs ──
+  if (msg.type === MESSAGE_TYPES.CONNECTOR_PENDING_GET) {
+    try {
+      const logs = await figma.clientStorage.getAsync(PENDING_SYNC_LOGS_KEY);
+      figma.ui.postMessage({
+        type: MESSAGE_TYPES.CONNECTOR_PENDING_GET_RESULT,
+        reqId: msg.reqId,
+        logs: Array.isArray(logs) ? logs : []
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: MESSAGE_TYPES.CONNECTOR_PENDING_GET_RESULT,
+        reqId: msg.reqId,
+        logs: [],
+        error: err.message || "Failed to read pending logs"
+      });
+    }
+    return;
+  }
+
+  // ── Save Pending Sync Logs ──
+  if (msg.type === MESSAGE_TYPES.CONNECTOR_PENDING_SET) {
+    try {
+      const logs = Array.isArray(msg.logs) ? msg.logs : [];
+      await figma.clientStorage.setAsync(PENDING_SYNC_LOGS_KEY, logs);
+      figma.ui.postMessage({
+        type: MESSAGE_TYPES.CONNECTOR_PENDING_SET_RESULT,
+        reqId: msg.reqId,
+        ok: true,
+        count: logs.length
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: MESSAGE_TYPES.CONNECTOR_PENDING_SET_RESULT,
+        reqId: msg.reqId,
+        ok: false,
+        error: err.message || "Failed to save pending logs"
       });
     }
     return;

@@ -586,9 +586,11 @@ const CONFIG = {
   // Timing (milliseconds)
   DEBOUNCE_RESIZE_MS: 100,
   DEBOUNCE_API_KEY_MS: 300,
-  LOG_REQUEST_TIMEOUT_MS: 8000,
+  LOG_REQUEST_TIMEOUT_MS: 20000,
   BUTTON_RESET_DELAY_MS: 800,
   TIMER_UPDATE_INTERVAL_MS: 1000,
+  CONNECTOR_LOG_RETRY_MAX: 3,
+  CONNECTOR_LOG_RETRY_BASE_DELAY_MS: 1200,
 
   // UI Classes & Status
   FILE_STATUSES: ["waiting", "processing", "done", "error"],
@@ -619,6 +621,10 @@ const CONFIG = {
     CONNECTOR_SYNC_GET_RESULT: "connector-sync-get-result",
     CONNECTOR_SYNC_SET: "connector-sync-set",
     CONNECTOR_SYNC_SET_RESULT: "connector-sync-set-result",
+    CONNECTOR_PENDING_GET: "connector-pending-get",
+    CONNECTOR_PENDING_GET_RESULT: "connector-pending-get-result",
+    CONNECTOR_PENDING_SET: "connector-pending-set",
+    CONNECTOR_PENDING_SET_RESULT: "connector-pending-set-result",
     CONNECTOR_LOG_SEND: "connector-log-send",
     CONNECTOR_LOG_SEND_RESULT: "connector-log-send-result",
     GENERATE: "generate",
@@ -635,6 +641,7 @@ let connectorConnected = false;
 let connectorSyncEnabled = false;
 let savedSheetLink = "";
 let generateTypeProduction = true;
+let pendingFlushInProgress = false;
 
 function setActiveTab(tab){
   const isGenerate = tab === "generate";
@@ -784,6 +791,7 @@ connectBtn.addEventListener("click", async () => {
     endpointInput.value = savedSheetLink;
     setConnectorConnected(true);
     document.getElementById("status").innerText = "✅ Google Sheet connected";
+    await flushPendingLogsIfPossible();
   } catch (e) {
     setConnectorConnected(false);
     document.getElementById("status").innerText = `❌ Connect failed: ${e.message}`;
@@ -1121,6 +1129,32 @@ window.onmessage = (event) => {
       pending.resolve({ enabled: Boolean(msg.enabled) });
     }else{
       pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to update generate type setting"));
+    }
+    return;
+  }
+
+  // ── Get Pending Logs Result ──
+  if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_PENDING_GET_RESULT){
+    if(typeof msg.reqId !== "number") return;
+    if(!Array.isArray(msg.logs)) return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    pending.resolve({ logs: msg.logs });
+    return;
+  }
+
+  // ── Save Pending Logs Result ──
+  if(msg.type === CONFIG.MESSAGE_TYPES.CONNECTOR_PENDING_SET_RESULT){
+    if(typeof msg.reqId !== "number") return;
+    if(typeof msg.ok !== "boolean") return;
+    const pending = pendingLogRequests.get(msg.reqId);
+    if(!pending) return;
+    pendingLogRequests.delete(msg.reqId);
+    if(msg.ok){
+      pending.resolve({ count: Number(msg.count) || 0 });
+    }else{
+      pending.reject(new Error(typeof msg.error === "string" ? msg.error : "Failed to save pending logs"));
     }
     return;
   }
@@ -1506,6 +1540,7 @@ async function initializeConnectorSettings(){
   await initializeGenerateType();
   await initializeConnectorSync();
   await initializeConnectorConfig();
+  await flushPendingLogsIfPossible();
 }
 
 initializeConnectorSettings();
@@ -1548,8 +1583,8 @@ async function logGeneration(success, failed, durationSec){
 
     await requestLogAction(CONFIG.MESSAGE_TYPES.LOGS_SAVE, { entry });
 
-    if(connectorSyncEnabled && connectorConnected){
-      await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_LOG_SEND, { entry });
+    if(connectorSyncEnabled){
+      await enqueueOrSendLog(entry);
     }
 
     console.log("[Log] Saved entry:", entry);
@@ -1605,6 +1640,97 @@ async function downloadGenerationLog(){
   } catch (e) {
     console.error("[Log] Error downloading log:", e.message);
     document.getElementById("status").innerText = "❌ Error: " + e.message;
+  }
+}
+
+function sleep(ms){
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getPendingSyncLogs(){
+  const data = await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_PENDING_GET);
+  return Array.isArray(data.logs) ? data.logs : [];
+}
+
+async function setPendingSyncLogs(logs){
+  const safeLogs = Array.isArray(logs) ? logs : [];
+  await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_PENDING_SET, { logs: safeLogs });
+}
+
+async function queuePendingLog(entry){
+  try {
+    const pending = await getPendingSyncLogs();
+    pending.push(entry);
+    await setPendingSyncLogs(pending);
+  } catch (e) {
+    console.error("[Log] Failed to queue pending log:", e.message);
+  }
+}
+
+async function sendConnectorLogWithRetry(entry){
+  let attempt = 0;
+  let lastError = null;
+
+  while(attempt < CONFIG.CONNECTOR_LOG_RETRY_MAX){
+    try {
+      await requestLogAction(CONFIG.MESSAGE_TYPES.CONNECTOR_LOG_SEND, { entry });
+      return true;
+    } catch (e) {
+      lastError = e;
+      attempt += 1;
+      if(attempt >= CONFIG.CONNECTOR_LOG_RETRY_MAX){
+        break;
+      }
+      const delayMs = CONFIG.CONNECTOR_LOG_RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError || new Error("Unknown connector send failure");
+}
+
+async function flushPendingLogsIfPossible(){
+  if(pendingFlushInProgress) return;
+  if(!connectorSyncEnabled || !connectorConnected) return;
+
+  pendingFlushInProgress = true;
+  try {
+    const pending = await getPendingSyncLogs();
+    if(pending.length === 0) return;
+
+    const stillPending = [];
+    for(const entry of pending){
+      try {
+        await sendConnectorLogWithRetry(entry);
+      } catch (e) {
+        stillPending.push(entry);
+      }
+    }
+
+    await setPendingSyncLogs(stillPending);
+    if(stillPending.length > 0){
+      document.getElementById("status").innerText = `⚠ Pending logs remaining: ${stillPending.length}`;
+    }
+  } catch (e) {
+    console.error("[Log] Failed to flush pending logs:", e.message);
+  } finally {
+    pendingFlushInProgress = false;
+  }
+}
+
+async function enqueueOrSendLog(entry){
+  if(!connectorConnected){
+    await queuePendingLog(entry);
+    return;
+  }
+
+  await flushPendingLogsIfPossible();
+
+  try {
+    await sendConnectorLogWithRetry(entry);
+  } catch (e) {
+    await queuePendingLog(entry);
+    document.getElementById("status").innerText = "⚠ Log sync delayed. Will retry automatically.";
   }
 }
 
