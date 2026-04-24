@@ -1,4 +1,4 @@
-# Wireframe to Form v2.0.9
+# Wireframe to Form v2.0.10
 
 Figma plugin that converts wireframe images into ready-to-use form layouts by extracting fields with AI, then mapping each field to components in your selected reference frame.
 
@@ -94,7 +94,7 @@ The generator maps extracted fields to component names in your selected referenc
 1. Open Figma Desktop.
 2. Go to `Plugins` > `Development` > `Import plugin from manifest`.
 3. Select [manifest.json](manifest.json).
-4. Run `Wireframe to Form v2.0.9` from Development plugins.
+4. Run `Wireframe to Form v2.0.10` from Development plugins.
 
 ## How To Use
 
@@ -127,20 +127,19 @@ Verify component names in the reference frame match supported field types.
 
 ## Version
 
-Current plugin title: `Wireframe to Form v2.0.9`
+Current plugin title: `Wireframe to Form v2.0.10`
 
 ## Latest Updates
 
-- Generated output is now placed directly below the selected reference frame (`x = referenceFrame.x`, `y = referenceFrame.y + referenceFrame.height + 200`) instead of canvas origin.
-- Fixed radio button checked-state mapping from wireframe image.
-- Fixed checkbox checked-state mapping from wireframe image.
-- Added optional Remark field on Generate tab; synced to Google Sheet log when enabled.
-- Improved Google Sheet sync reliability with retry + exponential backoff; pending logs auto-flush on reconnect.
-- Excluded upload-internal buttons (`Browse...` / `เลือกไฟล์`) from standalone button generation.
-- Added `ButtonAction` generation between form fields based on wireframe order; supports `{Button}` and `Button` label placeholders.
-- Added `Generate Type` toggle (Production / Test) with local persistence; value included in every generation log entry.
-- Increased maximum file upload limit from 5 to 20 images per generation.
-- Added optional Google Sheet log sync via Supabase connector with connect/disconnect flow.
-- Added `Input_Upload` support with condition mapped to Figma Description field; added `Input_NumberRange` with default placeholder.
-- Fixed DOM XSS vulnerability, added message validation and file size limits.
+- `v2.0.10` Standardized Latest Updates format to show release versions on each entry.
+- `v2.0.9` Generated output now appears below the selected reference frame instead of canvas origin.
+- `v2.0.8` Fixed radio button checked-state mapping from wireframe images.
+- `v2.0.7` Fixed checkbox checked-state mapping from wireframe images.
+- `v2.0.6` Added optional Remark field on the Generate tab and included it in generation logs.
+- `v2.0.5` Improved Google Sheet sync reliability with retry and exponential backoff.
+- `v2.0.5` Added pending-log recovery so unsent logs can flush after reconnecting.
+- `v2.0.4` Excluded upload-internal buttons such as `Browse...` and `เลือกไฟล์` from standalone button generation.
+- `v2.0.3` Added `ButtonAction` generation between form fields based on wireframe order.
+- `v2.0.3` Added support for button text placeholders named `{Button}` or `Button`.
+- `v2.0.2` Released internal maintainability cleanup for more consistent code and comments.
 
