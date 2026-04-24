@@ -131,14 +131,16 @@ Current plugin title: `Wireframe to Form v2.0.9`
 
 ## Latest Updates
 
-- Generated output wrapper now positions below the selected reference frame using `x = referenceFrame.x` and `y = referenceFrame.y + referenceFrame.height + 200`.
-- Improved Google Sheet log sync reliability with retry + exponential backoff.
-- Added persistent pending-log queue and automatic flush when reconnecting.
-- Increased connector request timeout to reduce false failures on slow networks.
-- Excluded upload-internal buttons (for example `Browse...` / `เลือกไฟล์`) from standalone button generation.
-- Added AI-response sanitizing step before generation to reduce false positive button insertion.
-- Added support for generating `ButtonAction` between form fields based on wireframe order.
-- Button label mapping now supports text placeholders named `{Button}` or `Button`.
-- Added `Generate Type` toggle in the Generate tab.
-- `Generate Type` is saved locally and restored on next plugin launch.
+- Generated output is now placed directly below the selected reference frame (`x = referenceFrame.x`, `y = referenceFrame.y + referenceFrame.height + 200`) instead of canvas origin.
+- Fixed radio button checked-state mapping from wireframe image.
+- Fixed checkbox checked-state mapping from wireframe image.
+- Added optional Remark field on Generate tab; synced to Google Sheet log when enabled.
+- Improved Google Sheet sync reliability with retry + exponential backoff; pending logs auto-flush on reconnect.
+- Excluded upload-internal buttons (`Browse...` / `เลือกไฟล์`) from standalone button generation.
+- Added `ButtonAction` generation between form fields based on wireframe order; supports `{Button}` and `Button` label placeholders.
+- Added `Generate Type` toggle (Production / Test) with local persistence; value included in every generation log entry.
+- Increased maximum file upload limit from 5 to 20 images per generation.
+- Added optional Google Sheet log sync via Supabase connector with connect/disconnect flow.
+- Added `Input_Upload` support with condition mapped to Figma Description field; added `Input_NumberRange` with default placeholder.
+- Fixed DOM XSS vulnerability, added message validation and file size limits.
 
