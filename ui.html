@@ -892,9 +892,118 @@ resizeObserver.observe(document.querySelector(".plugin-window"));
 
 // ── Drop Zone Drag Feedback ────────────────────────────────────────────────────
 const dz = document.getElementById("dropzone");
-dz.addEventListener("dragover",  (e) => { e.preventDefault(); dz.classList.add("dragover"); });
-dz.addEventListener("dragleave", ()  => dz.classList.remove("dragover"));
-dz.addEventListener("drop",      (e) => { e.preventDefault(); dz.classList.remove("dragover"); });
+const fileInput = document.getElementById("file");
+
+function createFileKey(file){
+  return [file.name, file.size, file.lastModified].join("::");
+}
+
+function compareFilesByName(a, b){
+  const byName = a.name.localeCompare(b.name, undefined, {
+    numeric: true,
+    sensitivity: "base"
+  });
+
+  if(byName !== 0) return byName;
+  return a.lastModified - b.lastModified;
+}
+
+function isEditableTarget(target){
+  if(!target) return false;
+  if(target.isContentEditable) return true;
+  const tag = String(target.tagName || "").toUpperCase();
+  return tag === "INPUT" || tag === "TEXTAREA";
+}
+
+function addFilesToQueue(incomingFiles, source = "upload"){
+  if(running) return;
+
+  const incoming = Array.from(incomingFiles || []);
+  if(incoming.length === 0) return;
+
+  const queued = files.map((file, idx) => ({ file, state: fileStates[idx] || "waiting" }));
+  const existingKeys = new Set(queued.map((entry) => createFileKey(entry.file)));
+
+  let skippedNotImage = 0;
+  let skippedTooLarge = 0;
+  let skippedDuplicate = 0;
+
+  for(const file of incoming){
+    if(!(file && String(file.type || "").toLowerCase().startsWith("image/"))){
+      skippedNotImage++;
+      continue;
+    }
+
+    if(file.size > CONFIG.MAX_FILE_SIZE_BYTES){
+      skippedTooLarge++;
+      continue;
+    }
+
+    const key = createFileKey(file);
+    if(existingKeys.has(key)){
+      skippedDuplicate++;
+      continue;
+    }
+
+    existingKeys.add(key);
+    queued.push({ file, state: "waiting" });
+  }
+
+  queued.sort((a, b) => compareFilesByName(a.file, b.file));
+
+  let skippedByLimit = 0;
+  if(queued.length > CONFIG.MAX_FILES){
+    skippedByLimit = queued.length - CONFIG.MAX_FILES;
+    queued.length = CONFIG.MAX_FILES;
+  }
+
+  files = queued.map((entry) => entry.file);
+  fileStates = queued.map((entry) => entry.state);
+
+  render();
+  updateDropLabel();
+
+  const addedCount = incoming.length - skippedNotImage - skippedTooLarge - skippedDuplicate;
+  const notes = [];
+  if(addedCount > 0) notes.push(`added ${Math.max(0, addedCount - skippedByLimit)}`);
+  if(skippedDuplicate > 0) notes.push(`${skippedDuplicate} duplicate`);
+  if(skippedNotImage > 0) notes.push(`${skippedNotImage} non-image`);
+  if(skippedTooLarge > 0) notes.push(`${skippedTooLarge} too large`);
+  if(skippedByLimit > 0) notes.push(`${skippedByLimit} over limit`);
+
+  if(notes.length > 0){
+    document.getElementById("status").innerText = `${source}: ${notes.join(", ")}`;
+  }
+}
+
+dz.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dz.classList.add("dragover");
+});
+
+dz.addEventListener("dragleave", () => dz.classList.remove("dragover"));
+
+dz.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dz.classList.remove("dragover");
+  addFilesToQueue(e.dataTransfer?.files || [], "Drop");
+});
+
+document.addEventListener("paste", (e) => {
+  if(isEditableTarget(e.target)) return;
+  if(!e.clipboardData) return;
+
+  const filesFromPaste = [];
+  for(const item of Array.from(e.clipboardData.items || [])){
+    if(item.kind !== "file") continue;
+    const file = item.getAsFile();
+    if(file) filesFromPaste.push(file);
+  }
+
+  if(filesFromPaste.length === 0) return;
+  e.preventDefault();
+  addFilesToQueue(filesFromPaste, "Paste");
+});
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function formatTime(seconds){
@@ -1174,11 +1283,9 @@ window.onmessage = (event) => {
 };
 
 
-document.getElementById("file").addEventListener("change",(e)=>{
-  files = Array.from(e.target.files);
-  fileStates = files.map(() => "waiting"); // Initialize all files as waiting
-  render();
-  updateDropLabel();
+fileInput.addEventListener("change", (e) => {
+  addFilesToQueue(e.target.files, "Click");
+  e.target.value = "";
 });
 
 function updateDropLabel(){

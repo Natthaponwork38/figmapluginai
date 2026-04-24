@@ -1,4 +1,4 @@
-# Wireframe to Form v2.1.0
+# Wireframe to Form v2.1.1
 
 Figma plugin that converts wireframe images into ready-to-use form layouts by extracting fields with AI, then mapping each field to components in your selected reference frame.
 
@@ -94,7 +94,7 @@ The generator maps extracted fields to component names in your selected referenc
 1. Open Figma Desktop.
 2. Go to `Plugins` > `Development` > `Import plugin from manifest`.
 3. Select [manifest.json](manifest.json).
-4. Run `Wireframe to Form v2.1.0` from Development plugins.
+4. Run `Wireframe to Form v2.1.1` from Development plugins.
 
 ## How To Use
 
@@ -127,10 +127,11 @@ Verify component names in the reference frame match supported field types.
 
 ## Version
 
-Current plugin title: `Wireframe to Form v2.1.0`
+Current plugin title: `Wireframe to Form v2.1.1`
 
 ## Latest Updates
 
+- `v2.1.1` Fixed file intake workflow: click now appends instead of replacing, drag/drop and paste image are supported, duplicates are skipped, and file list stays sorted by filename.
 - `v2.1.0` Standardized Latest Updates format to show release versions on each entry.
 - `v2.0.9` Generated output now appears below the selected reference frame instead of canvas origin.
 - `v2.0.8` Fixed radio button checked-state mapping from wireframe images.
