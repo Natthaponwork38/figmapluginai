@@ -866,29 +866,110 @@ function findFirstInstanceByName(root, targetName) {
   );
 }
 
-function setChoiceCheckedState(item, checked) {
+function setChoicePropertyState(target, propertyName, checked, truthyValue, falsyValue) {
+  if (!target || !target.componentProperties || typeof checked !== "boolean") return false;
+
+  const propKey = Object.keys(target.componentProperties).find(
+    (key) => key.toLowerCase().includes(propertyName.toLowerCase())
+  );
+  if (!propKey) return false;
+
+  const currentProp = target.componentProperties[propKey];
+
+  if (currentProp && typeof currentProp.value === "string") {
+    const rawCurrentValue = currentProp.value.trim();
+    const normalizedCurrentValue = rawCurrentValue.toLowerCase();
+    const nextValue =
+      rawCurrentValue === "True" || rawCurrentValue === "False"
+        ? checked ? "True" : "False"
+        : rawCurrentValue === "true" || rawCurrentValue === "false"
+          ? checked ? "true" : "false"
+          : normalizedCurrentValue === "true" || normalizedCurrentValue === "false"
+            ? checked ? truthyValue : falsyValue
+            : checked
+              ? truthyValue
+              : falsyValue;
+
+    target.setProperties({
+      [propKey]: nextValue
+    });
+    return true;
+  }
+
+  target.setProperties({
+    [propKey]: checked
+  });
+  return true;
+}
+
+function setCheckboxChoiceCheckedState(item, checked) {
   if (typeof checked !== "boolean") return;
 
   try {
     const checkboxElement = findFirstInstanceByName(item, "Checkbox Element");
-    if (!checkboxElement || !checkboxElement.componentProperties) return;
-
-    const valueKey = Object.keys(checkboxElement.componentProperties).find(
-      (key) => key.toLowerCase().includes("value")
+    const applied = setChoicePropertyState(
+      checkboxElement,
+      "value",
+      checked,
+      "Checked",
+      "Unchecked"
     );
-    if (!valueKey) return;
-
-    const currentProp = checkboxElement.componentProperties[valueKey];
-
-    if (currentProp && typeof currentProp.value === "string") {
-      checkboxElement.setProperties({
-        [valueKey]: checked ? "Checked" : "Unchecked"
+    if (!applied) {
+      console.warn("[Choices] Checkbox Element state was not applied", {
+        checked
       });
+    }
+  } catch (e) {}
+}
+
+function setRadioChoiceCheckedState(item, checked) {
+  if (typeof checked !== "boolean") return;
+
+  try {
+    const radioElement = findFirstInstanceByName(item, "Radiobutton Element");
+    const applied = setChoicePropertyState(
+      radioElement,
+      "checked",
+      checked,
+      "True",
+      "False"
+    );
+
+    if (!applied) {
+      console.warn("[Choices] Radiobutton Element state was not applied", {
+        checked
+      });
+    }
+  } catch (e) {}
+}
+
+function setChoiceCheckedState(item, fieldType, checked) {
+  if (typeof checked !== "boolean") return;
+
+  if (fieldType === "Input_Checkbox") {
+    setCheckboxChoiceCheckedState(item, checked);
+    return;
+  }
+
+  if (fieldType === "Input_RadioButton") {
+    setRadioChoiceCheckedState(item, checked);
+    return;
+  }
+
+  try {
+    const checkboxElement = findFirstInstanceByName(item, "Checkbox Element");
+    if (checkboxElement) {
+      setCheckboxChoiceCheckedState(item, checked);
       return;
     }
 
-    checkboxElement.setProperties({
-      [valueKey]: checked
+    const radioElement = findFirstInstanceByName(item, "Radiobutton Element");
+    if (radioElement) {
+      setRadioChoiceCheckedState(item, checked);
+      return;
+    }
+
+    console.warn("[Choices] No selectable element found for choice", {
     });
   } catch (e) {}
 }
@@ -924,7 +1005,7 @@ async function buildChoices(instance, field) {
       text.characters = choice.label;
     }
 
-    setChoiceCheckedState(item, choice.checked);
+    setChoiceCheckedState(item, field.type, choice.checked);
     builtItems.push(item);
   }
 

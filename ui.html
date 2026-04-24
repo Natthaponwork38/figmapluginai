@@ -956,35 +956,6 @@ function sanitizeAiResponseJson(rawText){
   return JSON.stringify(filtered);
 }
 
-function debugAiJson(stage, fileName, rawText, sanitizedJson){
-  const prefix = `[${stage}] ${fileName}`;
-
-  console.group(`${prefix} JSON Debug`);
-  console.log("Raw text:", rawText);
-  console.log("Sanitized JSON string:", sanitizedJson);
-
-  try {
-    const parsed = JSON.parse(sanitizedJson);
-    console.log("Parsed JSON object:", parsed);
-
-    const choiceSummary = Array.isArray(parsed)
-      ? parsed
-          .filter((item) => item && (item.type === "Input_Checkbox" || item.type === "Input_RadioButton"))
-          .map((item) => ({
-            label: item.label,
-            type: item.type,
-            choices: item.choices
-          }))
-      : [];
-
-    console.log("Checkbox/Radio summary:", choiceSummary);
-  } catch (err) {
-    console.error(`${prefix} parsed JSON error:`, err.message);
-  }
-
-  console.groupEnd();
-}
-
 function startLiveTimer(){
   timerInterval = setInterval(()=>{
     const now = Date.now();
@@ -1397,7 +1368,6 @@ async function retryFile(i){
     }
 
     const sanitizedJson = sanitizeAiResponseJson(text);
-    debugAiJson("Retry", file.name, text, sanitizedJson);
 
     parent.postMessage({
       pluginMessage:{
@@ -1898,7 +1868,6 @@ async function generateWrapper(){
       let sanitizedJson;
       try {
         sanitizedJson = sanitizeAiResponseJson(text);
-        debugAiJson("Generate", file.name, text, sanitizedJson);
       } catch (sanitizeErr) {
         console.error(`[Generate] ${file.name} sanitize error:`, sanitizeErr.message);
         setFileStatus(i,"error");
