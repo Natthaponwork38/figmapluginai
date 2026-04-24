@@ -10,6 +10,7 @@ const PENDING_SYNC_LOGS_KEY = "GOOGLE_SHEET_PENDING_LOGS";
 const GENERATE_TYPE_KEY = "GENERATE_TYPE_PRODUCTION";
 const OPENAI_API_KEY_KEY = "OPENAI_API_KEY";
 const CONNECTOR_ENDPOINT = "https://mfmgdwbxztiprplkgpgc.supabase.co/functions/v1/google-sheet-connector";
+const GENERATED_WRAPPER_GAP_Y = 200;
 
 function isValidHttpUrl(value) {
   if (typeof value !== "string") return false;
@@ -116,6 +117,16 @@ function getOrCreateWrapper() {
 
   rootWrapper = frame;
   return frame;
+}
+
+function placeWrapperBelowReferenceFrame(wrapper, reference) {
+  if (!wrapper || !reference) return;
+
+  const referenceX = reference.absoluteTransform[0][2];
+  const referenceY = reference.absoluteTransform[1][2];
+
+  wrapper.x = referenceX;
+  wrapper.y = referenceY + reference.height + GENERATED_WRAPPER_GAP_Y;
 }
 
 // ── Main Message Handler ──────────────────────────────────────────────────────
@@ -501,6 +512,7 @@ figma.ui.onmessage = async (msg) => {
       }
 
       const wrapper = getOrCreateWrapper();
+      placeWrapperBelowReferenceFrame(wrapper, referenceFrame);
 
       const clean = msg.json
         .replace(/```json/g, "")
