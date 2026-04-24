@@ -956,6 +956,35 @@ function sanitizeAiResponseJson(rawText){
   return JSON.stringify(filtered);
 }
 
+function debugAiJson(stage, fileName, rawText, sanitizedJson){
+  const prefix = `[${stage}] ${fileName}`;
+
+  console.group(`${prefix} JSON Debug`);
+  console.log("Raw text:", rawText);
+  console.log("Sanitized JSON string:", sanitizedJson);
+
+  try {
+    const parsed = JSON.parse(sanitizedJson);
+    console.log("Parsed JSON object:", parsed);
+
+    const choiceSummary = Array.isArray(parsed)
+      ? parsed
+          .filter((item) => item && (item.type === "Input_Checkbox" || item.type === "Input_RadioButton"))
+          .map((item) => ({
+            label: item.label,
+            type: item.type,
+            choices: item.choices
+          }))
+      : [];
+
+    console.log("Checkbox/Radio summary:", choiceSummary);
+  } catch (err) {
+    console.error(`${prefix} parsed JSON error:`, err.message);
+  }
+
+  console.groupEnd();
+}
+
 function startLiveTimer(){
   timerInterval = setInterval(()=>{
     const now = Date.now();
@@ -1368,6 +1397,7 @@ async function retryFile(i){
     }
 
     const sanitizedJson = sanitizeAiResponseJson(text);
+    debugAiJson("Retry", file.name, text, sanitizedJson);
 
     parent.postMessage({
       pluginMessage:{
@@ -1407,7 +1437,7 @@ const OPENAI_PROMPT = [
 '"placeholder": "string | null",',
 '"value": "string (optional)",',
 '"condition": "string (optional)",',
-'"choices": [],',
+'"choices": "array (string[] or object[] depending on field type)",',
 '"confidence": 0.95,',
 '"reason": "string"',
 "}",
@@ -1415,6 +1445,8 @@ const OPENAI_PROMPT = [
 
 "FOR kind=field:",
 "- Keep field schema as-is: label, type, placeholder, optional value, optional condition, optional choices",
+"- For normal fields, choices can remain []",
+"- For Input_Checkbox and Input_RadioButton, choices MUST contain selection state for every visible option",
 
 "FOR kind=button:",
 "- type MUST be ButtonAction",
@@ -1522,6 +1554,14 @@ const OPENAI_PROMPT = [
 "CRITICAL FOR RADIO & CHECKBOX:",
 "- Label = text BEFORE checkbox/radio group",
 "- Choices = text NEXT TO each checkbox/radio",
+"- For Input_Checkbox and Input_RadioButton, output choices as objects in this exact shape:",
+"- [{\"label\":\"<exact visible choice text from wireframe>\",\"checked\":true|false}]",
+"- label MUST be the exact visible choice text from the wireframe, character-for-character",
+"- NEVER rewrite, normalize, translate, simplify, or replace any label text",
+"- checked = true when the checkbox/radio is visibly selected in the wireframe",
+"- checked = false when it is visibly unselected in the wireframe",
+"- Every visible choice MUST include checked explicitly",
+"- If selection is unclear, default checked to false",
 "- NEVER treat choice as label",
 "- NEVER leave choices empty"
 
@@ -1858,6 +1898,7 @@ async function generateWrapper(){
       let sanitizedJson;
       try {
         sanitizedJson = sanitizeAiResponseJson(text);
+        debugAiJson("Generate", file.name, text, sanitizedJson);
       } catch (sanitizeErr) {
         console.error(`[Generate] ${file.name} sanitize error:`, sanitizeErr.message);
         setFileStatus(i,"error");

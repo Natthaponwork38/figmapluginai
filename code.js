@@ -806,8 +806,91 @@ async function setTextByAliases(instance, aliases, value) {
 function normalizeChoices(choices) {
   if (!choices) return [];
   return choices
-    .map((c) => (typeof c === "string" ? c.trim() : ""))
+    .map((c) => {
+      if (typeof c === "string") {
+        const raw = c.trim();
+        if (!raw) return null;
+
+        let checked;
+        let label = raw;
+
+        if (/^\[(x|X)\]\s*/.test(raw) || /^[☑✅]\s*/.test(raw)) {
+          checked = true;
+          label = raw.replace(/^(\[(x|X)\]|[☑✅])\s*/, "").trim();
+        } else if (/^\[\s\]\s*/.test(raw) || /^[☐]\s*/.test(raw)) {
+          checked = false;
+          label = raw.replace(/^(\[\s\]|[☐])\s*/, "").trim();
+        }
+
+        if (!label) return null;
+        return { label, checked };
+      }
+
+      if (c && typeof c === "object") {
+        const labelRaw =
+          typeof c.label === "string"
+            ? c.label
+            : typeof c.text === "string"
+              ? c.text
+              : "";
+        const label = labelRaw.trim();
+        if (!label) return null;
+
+        let checked;
+
+        if (typeof c.checked === "boolean") {
+          checked = c.checked;
+        } else if (typeof c.selected === "boolean") {
+          checked = c.selected;
+        } else if (typeof c.value === "string") {
+          const value = c.value.trim().toLowerCase();
+          if (value === "checked" || value === "true") checked = true;
+          if (value === "unchecked" || value === "false") checked = false;
+        }
+
+        return { label, checked };
+      }
+
+      return null;
+    })
     .filter(Boolean);
+}
+
+function findFirstInstanceByName(root, targetName) {
+  if (!root || typeof root.findOne !== "function") return null;
+  return root.findOne(
+    (n) =>
+      n.type === "INSTANCE" &&
+      typeof n.name === "string" &&
+      n.name.trim().toLowerCase() === targetName.trim().toLowerCase()
+  );
+}
+
+function setChoiceCheckedState(item, checked) {
+  if (typeof checked !== "boolean") return;
+
+  try {
+    const checkboxElement = findFirstInstanceByName(item, "Checkbox Element");
+    if (!checkboxElement || !checkboxElement.componentProperties) return;
+
+    const valueKey = Object.keys(checkboxElement.componentProperties).find(
+      (key) => key.toLowerCase().includes("value")
+    );
+    if (!valueKey) return;
+
+    const currentProp = checkboxElement.componentProperties[valueKey];
+
+    if (currentProp && typeof currentProp.value === "string") {
+      checkboxElement.setProperties({
+        [valueKey]: checked ? "Checked" : "Unchecked"
+      });
+      return;
+    }
+
+    checkboxElement.setProperties({
+      [valueKey]: checked
+    });
+  } catch (e) {}
 }
 
 async function buildChoices(instance, field) {
@@ -817,17 +900,18 @@ async function buildChoices(instance, field) {
   const group = instance.findOne((n) => n.name === "Group");
   if (!group) return;
 
-  const template = group.findOne(
+  const templates = group.children.filter(
     (n) => n.type === "INSTANCE" || n.type === "FRAME"
   );
-  if (!template) return;
+  if (!templates.length) return;
 
-  const base = template.clone();
+  const builtItems = [];
 
-  for (const child of [...group.children]) child.remove();
+  for (let i = 0; i < choices.length; i++) {
+    const choice = choices[i];
+    const sourceTemplate = templates[i] || templates[templates.length - 1];
 
-  for (const choice of choices) {
-    let item = base.clone();
+    let item = sourceTemplate.clone();
 
     if (item.type === "INSTANCE") {
       item = item.detachInstance();
@@ -837,9 +921,15 @@ async function buildChoices(instance, field) {
 
     if (text) {
       await loadFont(text);
-      text.characters = choice;
+      text.characters = choice.label;
     }
 
+    setChoiceCheckedState(item, choice.checked);
+    builtItems.push(item);
+  }
+
+  for (const child of [...group.children]) child.remove();
+  for (const item of builtItems) {
     group.appendChild(item);
   }
 }
