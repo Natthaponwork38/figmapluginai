@@ -1565,6 +1565,8 @@ const OPENAI_PROMPT = [
 "VALUE DETECTION RULES:",
 "- If an input field already contains meaningful user-entered text → assign it to 'value'",
 "- If text looks like hint text (e.g. 'ระบุ...', 'กรอก...', 'Placeholder', 'Enter...', 'Select...') → treat it as placeholder",
+"- For Input_Dropdown: if the field visibly shows a selected option, that visible option text MUST be returned in 'value'",
+"- For Input_Dropdown: use placeholder only when there is no selected option shown",
 "- If value exists → MUST include 'value'",
 "- If no value → DO NOT include 'value'",
 

@@ -731,11 +731,50 @@ function normalizeExtractedItem(raw, index) {
       type,
       label,
       placeholder: raw.placeholder,
-      value: raw.value,
+      value: resolveFieldValue(type, raw),
       condition: raw.condition,
       choices: Array.isArray(raw.choices) ? raw.choices : []
     }
   };
+}
+
+function resolveFieldValue(type, raw) {
+  const rawValue = raw ? raw.value : undefined;
+
+  if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
+    return rawValue;
+  }
+
+  // Dropdown fallback: if AI omits `value`, attempt to recover it from selected choice data.
+  if (type !== "Input_Dropdown") {
+    return rawValue;
+  }
+
+  const choices = raw && Array.isArray(raw.choices) ? raw.choices : [];
+  for (const choice of choices) {
+    if (!choice || typeof choice !== "object") continue;
+
+    const isSelected =
+      choice.selected === true ||
+      choice.checked === true ||
+      (typeof choice.value === "string" && choice.value.trim().toLowerCase() === "selected") ||
+      (typeof choice.state === "string" && choice.state.trim().toLowerCase() === "selected");
+
+    if (!isSelected) continue;
+
+    const label =
+      typeof choice.label === "string"
+        ? choice.label.trim()
+        : typeof choice.text === "string"
+          ? choice.text.trim()
+          : "";
+
+    if (label) {
+      return label;
+    }
+  }
+
+  return rawValue;
 }
 
 // ── Value Variant ─────────────────────────────────────────────────────────────

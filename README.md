@@ -1,4 +1,4 @@
-# Wireframe to Form v2.1.1
+# Wireframe to Form v2.1.2
 
 Figma plugin that converts wireframe images into ready-to-use form layouts by extracting fields with AI, then mapping each field to components in your selected reference frame.
 
@@ -94,7 +94,7 @@ The generator maps extracted fields to component names in your selected referenc
 1. Open Figma Desktop.
 2. Go to `Plugins` > `Development` > `Import plugin from manifest`.
 3. Select [manifest.json](manifest.json).
-4. Run `Wireframe to Form v2.1.1` from Development plugins.
+4. Run `Wireframe to Form v2.1.2` from Development plugins.
 
 ## How To Use
 
@@ -127,10 +127,11 @@ Verify component names in the reference frame match supported field types.
 
 ## Version
 
-Current plugin title: `Wireframe to Form v2.1.1`
+Current plugin title: `Wireframe to Form v2.1.2`
 
 ## Latest Updates
 
+- `v2.1.2` Improved Dropdown value handling to follow Text behavior, added startup compatibility fix for unsupported optional-chaining syntax, and preserved placeholder behavior for empty Dropdown fields.
 - `v2.1.1` Fixed file intake workflow: click now appends instead of replacing, drag/drop and paste image are supported, duplicates are skipped, and file list stays sorted by filename.
 - `v2.1.0` Standardized Latest Updates format to show release versions on each entry.
 - `v2.0.9` Generated output now appears below the selected reference frame instead of canvas origin.
@@ -140,7 +141,5 @@ Current plugin title: `Wireframe to Form v2.1.1`
 - `v2.0.5` Improved Google Sheet sync reliability with retry and exponential backoff.
 - `v2.0.5` Added pending-log recovery so unsent logs can flush after reconnecting.
 - `v2.0.4` Excluded upload-internal buttons such as `Browse...` and `เลือกไฟล์` from standalone button generation.
-- `v2.0.3` Added `ButtonAction` generation between form fields based on wireframe order.
 - `v2.0.3` Added support for button text placeholders named `{Button}` or `Button`.
-- `v2.0.2` Released internal maintainability cleanup for more consistent code and comments.
 
